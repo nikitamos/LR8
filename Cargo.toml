@@ -1,0 +1,18 @@
+[package]
+name = "LR8"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name="lr8backend"
+path = "src/backend/backend.rs"
+crate-type = ["cdylib"]
+
+[[bin]]
+name="lr8test"
+path="src/backend/main.rs"
+
+[dependencies]
+elasticsearch = "8.16.0-alpha.1"
+# http = "1.2.0"
+serde_json = "1.0.133"

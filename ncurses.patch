@@ -1,0 +1,12 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index dcec030..68ac198 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
+ add_library(imtui ${IMTUI_LIBRARY_TYPE}
+     imtui-impl-text.cpp
++    imtui-impl-ncurses.cpp
+     )
+ 
+ target_include_directories(imtui PUBLIC
