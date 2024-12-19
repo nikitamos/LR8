@@ -12,7 +12,5 @@ add_compile_options(${CURSES_CFLAGS})
 
 add_subdirectory(imtui)
 
-add_library(lab8-frontend src/frontend/ui.c src/frontend/widgets.c)
-
 add_executable(task1 src/frontend/task1.cpp)
 target_link_libraries(task1 PRIVATE lr8backend imtui ${CURSES_LIBRARIES} ${lr8backend_LIBRARIES})

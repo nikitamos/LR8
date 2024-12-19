@@ -7,11 +7,15 @@ use http::{
     transport::{SingleNodeConnectionPool, TransportBuilder},
     Url,
 };
-use std::{error::Error, ffi::{c_char, c_int, c_void, CStr, CString}, ptr::{null, null_mut, NonNull}, str::FromStr};
+use std::{
+    error::Error,
+    ffi::{c_char, c_int, c_void, CStr, CString},
+    ptr::{null, null_mut, NonNull},
+    str::FromStr,
+};
 
 // #[no_mangle]
-extern "C" const STEEL_DENSITY: f32 = 8000f32;
-
+//extern "C" const STEEL_DENSITY: f32 = 8000f32;
 
 #[repr(C, i32)]
 pub enum Material {
@@ -58,24 +62,27 @@ pub extern "C" fn add_item(item: FactoryPart) {
 }
 
 #[no_mangle]
-pub extern "C" fn create_document(handle: Option<&mut Elasticsearch>, name: *const c_char) -> *const u8 {
-  if let None = handle {
-    return null();
-  }
-  let els = unsafe {handle.unwrap_unchecked()};
-  let res = unsafe { CStr::from_ptr(name) }.to_str();
-  match res {
-    Ok(name) => {
-      let parts = CreateParts::IndexId(name, "");
-      let x = els.create(parts);
-      dbg!(x);
-      null()
-    },
-    Err(e) => {
-      eprintln!("Ошибка декодирования utf-8: {}", e);
-      null()
+pub extern "C" fn create_document(
+    handle: Option<&mut Elasticsearch>,
+    name: *const c_char,
+) -> *const u8 {
+    if let None = handle {
+        return null();
     }
-  }
+    let els = unsafe { handle.unwrap_unchecked() };
+    let res = unsafe { CStr::from_ptr(name) }.to_str();
+    match res {
+        Ok(name) => {
+            let parts = CreateParts::IndexId(name, "");
+            let x = els.create(parts);
+            dbg!(x);
+            null()
+        }
+        Err(e) => {
+            eprintln!("Ошибка декодирования utf-8: {}", e);
+            null()
+        }
+    }
 }
 
 #[no_mangle]
@@ -86,3 +93,9 @@ pub extern "C" fn close_client(handle: *mut Elasticsearch) -> () {
         }
     }
 }
+
+#[no_mangle]
+pub extern "C" fn add_part(part: FactoryPart) {}
+
+// #[no_mangle]
+// pub extern "C" fn
