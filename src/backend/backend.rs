@@ -10,9 +10,7 @@ use http::{
     Url,
 };
 use serde::{de::Visitor, Deserialize, Serialize};
-use serde_json::{json, Value};
 use std::{
-    alloc::Allocator,
     ffi::{c_char, CStr, CString},
     ptr::{null, null_mut},
     str::FromStr,
@@ -40,7 +38,7 @@ impl Serialize for BufferString {
 }
 
 struct BufStrVisitor;
-impl<'de> Visitor<'de> for BufStrVisitor {
+impl Visitor<'_> for BufStrVisitor {
     type Value = BufferString;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -85,7 +83,7 @@ pub extern "C" fn init_client() -> *mut Elasticsearch {
             Box::into_raw(client)
         }
         Err(e) => {
-            eprintln!("Error creating ElasticSearch client: {}", e.to_string());
+            eprintln!("Error creating ElasticSearch client: {}", e);
             null_mut()
         }
     }
@@ -96,7 +94,7 @@ pub extern "C" fn create_document(
     handle: Option<&mut Elasticsearch>,
     name: *const c_char,
 ) -> *const u8 {
-    if let None = handle {
+    if handle.is_none() {
         return null();
     }
     let els = unsafe { handle.unwrap_unchecked() };
@@ -121,7 +119,7 @@ pub extern "C" fn create_document(
 }
 
 #[no_mangle]
-pub extern "C" fn close_client(handle: *mut Elasticsearch) -> () {
+pub extern "C" fn close_client(handle: *mut Elasticsearch) {
     if !handle.is_null() {
         unsafe {
             drop(Box::from_raw(handle));

@@ -1,16 +1,10 @@
 use core::{slice, str};
 use elasticsearch::*;
-use http::{
-    transport::{SingleNodeConnectionPool, TransportBuilder},
-    Url,
-};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::{
     alloc::Allocator,
-    ffi::{c_char, CStr},
-    ptr::{null, null_mut},
-    str::FromStr,
+    ptr::null_mut,
 };
 
 use crate::BufferString;
@@ -39,7 +33,7 @@ pub struct FactoryPart {
 pub extern "C" fn add_parts(handle: &mut Elasticsearch, parts: *const FactoryPart, count: i32) {
     let operations: Vec<BulkOperation<Value>> =
         unsafe { slice::from_raw_parts(parts, count as usize) }
-            .into_iter()
+            .iter()
             .map(|x| BulkOperation::create(serde_json::to_value(x).unwrap()).into())
             .collect();
     let response = handle
@@ -56,12 +50,11 @@ pub extern "C" fn add_parts(handle: &mut Elasticsearch, parts: *const FactoryPar
 
 #[no_mangle]
 pub extern "C" fn retrieve_all(handle: &mut Elasticsearch) -> *mut FactoryPart {
-    let allocator = std::alloc::System::default();
+    let allocator = std::alloc::System;
     if let Ok(layout) = std::alloc::Layout::array::<FactoryPart>(10) {
         return allocator
             .allocate(layout)
-            .ok()
-            .and_then(|x| Some(x.as_mut_ptr().cast()))
+            .ok().map(|x| x.as_mut_ptr().cast())
             .unwrap_or(null_mut());
     }
     null_mut()
