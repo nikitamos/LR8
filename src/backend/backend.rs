@@ -1,48 +1,83 @@
 #![feature(box_as_ptr)]
+#![feature(allocator_api)]
+#![feature(slice_ptr_get)]
+#![feature(mem_copy_fn)]
 
-use auth::Credentials;
 use core::{slice, str};
 use elasticsearch::*;
 use http::{
     transport::{SingleNodeConnectionPool, TransportBuilder},
     Url,
 };
+use serde::{de::Visitor, Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::{
-    error::Error,
-    ffi::{c_char, c_int, c_void, CStr, CString},
-    ptr::{null, null_mut, NonNull},
+    alloc::Allocator,
+    ffi::{c_char, CStr, CString},
+    ptr::{null, null_mut},
     str::FromStr,
 };
 
 // #[no_mangle]
 //extern "C" const STEEL_DENSITY: f32 = 8000f32;
 
-#[repr(C, i32)]
-pub enum Material {
-    /// Марка
-    Steel(i32) = 0,
-    /// Проценстное содержание олова
-    Brass(f32) = 1,
+pub const TASK1_INDEX: &str = "task1_factory";
+
+pub mod task_1;
+
+#[repr(transparent)]
+pub struct BufferString(pub [c_char; 80]);
+
+impl Serialize for BufferString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let s = unsafe { str::from_utf8(slice::from_raw_parts(self.0.as_ptr().cast(), 80)) }
+            .expect("Invalid Utf-8 string!");
+        serializer.serialize_str(s)
+    }
 }
 
-#[repr(C)]
-pub struct FactoryPart {
-    pub name: [c_char; 80],
-    pub count: i32,
-    pub department_no: i32,
-    pub material: Material,
-    pub weight: f32,
-    pub volume: f32,
+struct BufStrVisitor;
+impl<'de> Visitor<'de> for BufStrVisitor {
+    type Value = BufferString;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a valid utf-8 80-byte string")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        let cstr = CString::from_str(v).expect("valid C UTF8 string");
+        let v = cstr.to_bytes();
+        if v.len() > 80 {
+            Err(E::custom("too long string"))
+        } else {
+            let mut val = BufferString([0; 80]);
+            let v = unsafe { slice::from_raw_parts(v.as_ptr().cast(), v.len()) };
+            val.0[..v.len()].clone_from_slice(v);
+            Ok(val)
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for BufferString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_string(BufStrVisitor)
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn init_client() -> *mut Elasticsearch {
-    // let cred = Credentials::Basic("elastic".to_owned(), "".to_owned());
-    // // let cp =  ConnectionPool::
     let transport = TransportBuilder::new(SingleNodeConnectionPool::new(
         Url::from_str("localhost:9200").unwrap(),
     ))
-    // .auth(cred)
     .build();
     match transport {
         Ok(transport) => {
@@ -54,11 +89,6 @@ pub extern "C" fn init_client() -> *mut Elasticsearch {
             null_mut()
         }
     }
-}
-
-#[no_mangle]
-pub extern "C" fn add_item(item: FactoryPart) {
-    todo!()
 }
 
 #[no_mangle]
@@ -75,6 +105,11 @@ pub extern "C" fn create_document(
         Ok(name) => {
             let parts = CreateParts::IndexId(name, "");
             let x = els.create(parts);
+            //     x.body(json!(r#"{
+            //     "mappings": {
+
+            //     }
+            // }"#));
             dbg!(x);
             null()
         }
@@ -93,9 +128,3 @@ pub extern "C" fn close_client(handle: *mut Elasticsearch) -> () {
         }
     }
 }
-
-#[no_mangle]
-pub extern "C" fn add_part(part: FactoryPart) {}
-
-// #[no_mangle]
-// pub extern "C" fn

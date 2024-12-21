@@ -8,11 +8,10 @@ name="lr8backend"
 path = "src/backend/backend.rs"
 crate-type = ["cdylib"]
 
-[[bin]]
-name="lr8test"
-path="src/backend/main.rs"
 
 [dependencies]
 elasticsearch = "8.16.0-alpha.1"
+serde = { version = "1.0.216", features = ["derive", "serde_derive"] }
 # http = "1.2.0"
 serde_json = "1.0.133"
+tokio = "1.42.0"

@@ -15,6 +15,8 @@
 namespace els {
 #endif  // __cplusplus
 
+typedef char BufferString[80];
+
 enum Material_Tag
 #ifdef __cplusplus
   : int32_t
@@ -46,7 +48,7 @@ struct Material {
 };
 
 struct FactoryPart {
-  char name[80];
+  BufferString name;
   int32_t count;
   int32_t department_no;
   struct Material material;
@@ -58,13 +60,15 @@ struct FactoryPart {
 extern "C" {
 #endif // __cplusplus
 
-void add_item(struct FactoryPart item);
+void add_parts(Elasticsearch *handle, const struct FactoryPart *parts, int32_t count);
 
 void close_client(Elasticsearch *handle);
 
 const uint8_t *create_document(Elasticsearch *handle, const char *name);
 
 Elasticsearch *init_client(void);
+
+struct FactoryPart *retrieve_all(Elasticsearch *handle);
 
 #ifdef __cplusplus
 }  // extern "C"
