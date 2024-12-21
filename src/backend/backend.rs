@@ -1,27 +1,37 @@
 #![feature(box_as_ptr)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
-#![feature(mem_copy_fn)]
 
 use core::{slice, str};
 use elasticsearch::*;
 use http::{
+    response::Response,
     transport::{SingleNodeConnectionPool, TransportBuilder},
     Url,
 };
+use log::{error, info, warn};
 use serde::{de::Visitor, Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::{
     ffi::{c_char, CStr, CString},
+    future::Future,
+    process::exit,
     ptr::{null, null_mut},
     str::FromStr,
 };
 
-// #[no_mangle]
-//extern "C" const STEEL_DENSITY: f32 = 8000f32;
-
 pub const TASK1_INDEX: &str = "task1_factory";
+pub const TASK1_MAPPINGS: &str = r#"
 
+"#;
+pub const TASK2_INDEX: &str = "task2_library";
 pub mod task_1;
+
+#[inline]
+fn wait4<T: Future>(f: T) -> T::Output {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(f)
+}
 
 #[repr(transparent)]
 pub struct BufferString(pub [c_char; 80]);
@@ -71,51 +81,115 @@ impl<'de> Deserialize<'de> for BufferString {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn init_client() -> *mut Elasticsearch {
-    let transport = TransportBuilder::new(SingleNodeConnectionPool::new(
-        Url::from_str("localhost:9200").unwrap(),
-    ))
-    .build();
-    match transport {
-        Ok(transport) => {
-            let client = Box::new(Elasticsearch::new(transport));
-            Box::into_raw(client)
+/// Creates an index with explicity mappings.
+/// If ElasticSearch responds, returns the response.
+/// Else prints the error to log and returns `None`
+fn create_index(
+    client: &mut Elasticsearch,
+    name: &str,
+    mappings: Option<Value>,
+) -> Option<Response> {
+    match wait4(
+        client
+            .indices()
+            .create(indices::IndicesCreateParts::Index(name))
+            .send(),
+    ) {
+        Ok(resp) => Some(resp),
+        Err(err) => {
+            error!(
+                "Unable to create index: {}, status code {}",
+                err.to_string(),
+                err.status_code()
+                    .map(|x| x.to_string())
+                    .unwrap_or("<unavailable>".to_owned())
+            );
+            None
         }
-        Err(e) => {
-            eprintln!("Error creating ElasticSearch client: {}", e);
-            null_mut()
+    }
+}
+
+/// Checks if the index exists and creates it if not.
+/// Returns `Ok` on success `Err` on failure.
+/// Both cases are reported to logs.
+fn check_create_index(
+    client: &mut Elasticsearch,
+    name: &str,
+    mappings: Option<Value>,
+) -> Result<(), ()> {
+    match wait4(
+        client
+            .indices()
+            .get(indices::IndicesGetParts::Index(&[name]))
+            .send(),
+    ) {
+        Ok(res) => {
+            if !res.status_code().is_success() {
+                warn!("Index {name} not found! Creating it anew");
+                if let Some(r) = create_index(client, name, mappings) {
+                    if let Err(e) = r.error_for_status_code() {
+                        error!(
+                            "Unable to create index {name}: {}, status code: {}",
+                            e.to_string(),
+                            e.status_code().unwrap()
+                        );
+                        Err(())
+                    } else {
+                        info!("Index {name} created");
+                        Ok(())
+                    }
+                } else {
+                    Err(())
+                }
+            } else {
+                info!("Index {name} alredy exists");
+                Ok(())
+            }
+        }
+        Err(err) => {
+            error!(
+                "{},\nstatus code {}",
+                err.to_string(),
+                err.status_code()
+                    .map(|x| x.as_str().to_owned())
+                    .unwrap_or("<unavailable>".to_owned())
+            );
+            Err(())
         }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn create_document(
-    handle: Option<&mut Elasticsearch>,
-    name: *const c_char,
-) -> *const u8 {
-    if handle.is_none() {
-        return null();
-    }
-    let els = unsafe { handle.unwrap_unchecked() };
-    let res = unsafe { CStr::from_ptr(name) }.to_str();
-    match res {
-        Ok(name) => {
-            let parts = CreateParts::IndexId(name, "");
-            let x = els.create(parts);
-            //     x.body(json!(r#"{
-            //     "mappings": {
+pub extern "C" fn init_client() -> *mut Elasticsearch {
+    let log_target = env_logger::Target::Stderr;
+    env_logger::Builder::new()
+        .target(log_target)
+        .format_source_path(false)
+        .format_timestamp(None)
+        .filter_level(log::LevelFilter::Info)
+        .init();
 
-            //     }
-            // }"#));
-            dbg!(x);
-            null()
-        }
+    let transport = TransportBuilder::new(SingleNodeConnectionPool::new(
+        Url::from_str("http://localhost:9200").unwrap(),
+    ))
+    .build();
+    let mut client = match transport {
+        Ok(transport) => Box::new(Elasticsearch::new(transport)),
         Err(e) => {
-            eprintln!("Ошибка декодирования utf-8: {}", e);
-            null()
+            error!("Error creating ElasticSearch client: {}", e);
+            return null_mut();
         }
+    };
+
+    if check_create_index(&mut client, TASK1_INDEX, None).is_err()
+        || check_create_index(&mut client, TASK2_INDEX, None).is_err()
+    {
+        error!("Failed to initialize client! Shutting down");
+        return null_mut();
     }
+
+    exit(-1);
+    Box::as_mut_ptr(&mut client)
 }
 
 #[no_mangle]

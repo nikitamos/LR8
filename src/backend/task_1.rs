@@ -2,12 +2,9 @@ use core::{slice, str};
 use elasticsearch::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{
-    alloc::Allocator,
-    ptr::null_mut,
-};
+use std::{alloc::Allocator, ptr::null_mut};
 
-use crate::BufferString;
+use crate::{wait4, BufferString};
 
 #[repr(C, i32)]
 #[derive(Serialize, Deserialize)]
@@ -29,8 +26,13 @@ pub struct FactoryPart {
     pub volume: f32,
 }
 
+/// Returns the `count` on success, zero on failure
 #[no_mangle]
-pub extern "C" fn add_parts(handle: &mut Elasticsearch, parts: *const FactoryPart, count: i32) {
+pub extern "C" fn add_parts(
+    handle: &mut Elasticsearch,
+    parts: *const FactoryPart,
+    count: i32,
+) -> i32 {
     let operations: Vec<BulkOperation<Value>> =
         unsafe { slice::from_raw_parts(parts, count as usize) }
             .iter()
@@ -40,11 +42,9 @@ pub extern "C" fn add_parts(handle: &mut Elasticsearch, parts: *const FactoryPar
         .bulk(BulkParts::Index(crate::TASK1_INDEX))
         .body(operations)
         .send();
-    let rt = tokio::runtime::Runtime::new().expect("Unable to create a tokio runtime");
-    let response = rt.block_on(response);
-    match response {
-        Ok(res) => todo!(),
-        Err(err) => todo!(),
+    match wait4(response) {
+        Ok(res) => count,
+        Err(err) => 0,
     }
 }
 
@@ -54,7 +54,8 @@ pub extern "C" fn retrieve_all(handle: &mut Elasticsearch) -> *mut FactoryPart {
     if let Ok(layout) = std::alloc::Layout::array::<FactoryPart>(10) {
         return allocator
             .allocate(layout)
-            .ok().map(|x| x.as_mut_ptr().cast())
+            .ok()
+            .map(|x| x.as_mut_ptr().cast())
             .unwrap_or(null_mut());
     }
     null_mut()
