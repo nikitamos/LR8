@@ -222,16 +222,24 @@ int main() {
 #endif
   Elasticsearch *client = els::init_client();
   if (client == nullptr) {
-    return 0;
+    std::cout << "Error creating Elasticsearch client\n";
+    return 1;
   }
   // Here fetch existing items
   els::FactoryPart *array = nullptr;
   CustomViewAction *view_action = nullptr;
-  els::retrieve_all(client);
   int old_size = 0;
   int array_size = 0;
   int filled_in = 0;
   int curr_item = 0;
+
+  els::retrieve_all(client, &array, &array_size);
+  if (array_size < 0) {
+    std::cout << "Error connecting to Elasticsearch\n";
+    els::close_client(client);
+    return 1;
+  }
+  filled_in = array_size;
 
   IMGUI_CHECKVERSION();
   auto ctx = ImGui::CreateContext();
@@ -342,6 +350,7 @@ int main() {
   ImTui_ImplText_Shutdown();
   ImTui_ImplNcurses_Shutdown();
 
+  free(array);
   els::close_client(client);
 
   return 0;

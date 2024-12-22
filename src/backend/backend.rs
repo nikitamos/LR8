@@ -2,12 +2,12 @@
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
 
-use cert::Certificate;
 use core::{slice, str};
 use elasticsearch::*;
 use http::{
+    request::Body,
     response::Response,
-    transport::{SingleNodeConnectionPool, Transport, TransportBuilder},
+    transport::{SingleNodeConnectionPool, TransportBuilder},
     Url,
 };
 use log::{error, info, warn};
@@ -95,17 +95,14 @@ pub trait ElasticId {
 
 #[derive(Deserialize)]
 pub struct BulkResult {
-    errors: bool,
-    took: i32,
+    pub errors: bool,
+    pub took: i32,
     items: Vec<JsonValue>,
 }
 
 impl BulkResult {
     pub fn is_ok(&self) -> bool {
         !self.errors
-    }
-    pub fn took(&self) -> i32 {
-        self.took
     }
     pub fn items(&self) -> &Vec<JsonValue> {
         &self.items
@@ -122,6 +119,47 @@ impl BulkResult {
         assert!(self.is_ok(), "Request failed");
         for (id, item) in self.items.iter().zip(items) {
             item.set_id(id["create"]["_id"].as_str().unwrap().to_owned());
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct SearchHits {
+    pub total: JsonValue,
+    pub max_score: f32,
+    pub hits: Vec<JsonValue>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct SearchResult {
+    pub took: i32,
+    pub timed_out: bool,
+    pub hits: SearchHits,
+}
+
+impl SearchResult {
+    pub fn count(&self) -> usize {
+        self.hits.total["value"].as_u64().unwrap() as usize
+    }
+    pub fn max_score(&self) -> f32 {
+        self.hits.max_score
+    }
+    pub unsafe fn populate_array<T: for<'a> Deserialize<'a> + ElasticId>(
+        self,
+        items: *mut T,
+        count: i32,
+    ) {
+        assert!(!self.timed_out, "Request is timed out");
+        assert_eq!(
+            self.count(),
+            count as usize,
+            "Length of results and slice are not equal"
+        );
+        for (i, mut res) in self.hits.hits.into_iter().enumerate() {
+            items
+                .add(i)
+                .write(serde_json::from_value(res["_source"].take()).unwrap());
+            (*items.add(i)).set_id(res["_id"].take().as_str().unwrap().to_owned());
         }
     }
 }
@@ -143,6 +181,24 @@ pub fn send_bulk<T: Serialize>(
         }
         Err(e) => {
             error!("Bulk failed: {e}");
+            None
+        }
+    }
+}
+
+#[must_use]
+pub fn send_search<'a, 'b, C: Body>(request: Search<'a, 'b, C>) -> Option<SearchResult> {
+    match wait4(request.send()) {
+        Ok(resp) => {
+            if !resp.status_code().is_success() {
+                error!("Search failed: {}", resp.status_code());
+            }
+            wait4(resp.json::<SearchResult>())
+                .map_err(|x| error!("Failed to parse Search response: {x}"))
+                .ok()
+        }
+        Err(e) => {
+            error!("Failed to send request: {e}");
             None
         }
     }

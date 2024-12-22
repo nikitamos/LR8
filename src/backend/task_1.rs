@@ -3,9 +3,10 @@ use elasticsearch::*;
 use log::{error, info, trace};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use std::alloc::{self, Allocator};
 use std::ptr::null_mut;
 
-use crate::{send_bulk, wait4, BufferString, ElasticId, TASK1_INDEX};
+use crate::{send_bulk, send_search, BufferString, ElasticId, TASK1_INDEX};
 
 #[repr(C, i32)]
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -76,41 +77,42 @@ pub extern "C" fn add_parts(
     }
 }
 
-#[repr(C)]
-pub struct RetrieveParts {
-    pub ptr: *mut FactoryPart,
-    pub count: isize,
-}
-
 /// Retrieves all parts from ElasticSearch.
 ///
 /// If no parts are retrieved or an error occured, returns null pointer.
 /// On success returns a valid pointer allocated by malloc
 #[no_mangle]
-pub extern "C" fn retrieve_all(handle: &mut Elasticsearch) -> *mut FactoryPart {
-    let srch = handle
-        .search(SearchParts::Index(&[TASK1_INDEX]))
-        .pretty(true)
-        .human(true)
-        // .header(headers::ACCEPT_ENCODING)
-        .to_owned()
-        .send();
-    match wait4(srch) {
-        Ok(resp) => {
-            info!("{:#?}", resp.headers());
-            info!("{:?}", wait4(resp.text()));
-        }
-        Err(_) => todo!(),
+pub extern "C" fn retrieve_all(
+    handle: &mut Elasticsearch,
+    parts: &mut *mut FactoryPart,
+    size: &mut i32,
+) {
+    *parts = null_mut();
+    *size = -1;
+    info!("Retrieving parts from an existing index");
+    match send_search(handle.search(SearchParts::Index(&[TASK1_INDEX]))) {
+        Some(result) => {
+            info!("Search succeed, {} documents in the index", result.count());
+            let allocator = alloc::System;
+            if (result.count()) == 0 {
+                *size = 0;
+                return;
+            }
+            if let Ok(layout) = alloc::Layout::array::<FactoryPart>(result.count()) {
+                if let Ok(ptr) = allocator.allocate(layout) {
+                    *parts = ptr.as_mut_ptr().cast();
+                    *size = result.count() as i32;
+                    unsafe {result.populate_array(*parts, *size)};
+                    // info!("Populated")
+                } else {
+                    error!("Failed to allocate memory");
+                }
+            } else {
+                error!("Failed to allocate memory");
+            }
+        },
+        None => error!("Retrieving parts failed")
     }
-    // let allocator = std::alloc::System;
-    // if let Ok(layout) = std::alloc::Layout::array::<FactoryPart>(10) {
-    //     return allocator
-    //         .allocate(layout)
-    //         .ok()
-    //         .map(|x| x.as_mut_ptr().cast())
-    //         .unwrap_or(null_mut());
-    // }
-    null_mut()
 }
 
 // #[no_mangle]

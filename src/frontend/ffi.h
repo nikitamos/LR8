@@ -78,7 +78,7 @@ Elasticsearch *init_client(void);
  * If no parts are retrieved or an error occured, returns null pointer.
  * On success returns a valid pointer allocated by malloc
  */
-struct FactoryPart *retrieve_all(Elasticsearch *handle);
+void retrieve_all(Elasticsearch *handle, struct FactoryPart **parts, int32_t *size);
 
 #ifdef __cplusplus
 }  // extern "C"
