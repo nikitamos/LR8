@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 
 [dependencies]
-elasticsearch = "8.16.0-alpha.1"
+elasticsearch = "8.17.0-alpha.1"
 env_logger = { version = "0.11.6", default-features = false, features = ["auto-color", "color", "humantime"] }
 log = "0.4.22"
 serde = { version = "1.0.216", features = ["derive", "serde_derive"] }

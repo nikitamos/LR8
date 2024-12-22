@@ -13,4 +13,5 @@ add_compile_options(${CURSES_CFLAGS})
 add_subdirectory(imtui)
 
 add_executable(task1 src/frontend/task1.cpp)
+set_target_properties(task1 PROPERTIES CXX_STANDARD 20)
 target_link_libraries(task1 PRIVATE lr8backend imtui ${CURSES_LIBRARIES} ${lr8backend_LIBRARIES})

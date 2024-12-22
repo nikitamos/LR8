@@ -15,6 +15,8 @@
 namespace els {
 #endif  // __cplusplus
 
+struct String;
+
 typedef char BufferString[80];
 
 enum Material_Tag
@@ -27,7 +29,7 @@ enum Material_Tag
    */
   Steel = 0,
   /**
-   * Проценстное содержание олова
+   * Процентное содержание олова
    */
   Brass = 1,
 };
@@ -54,20 +56,28 @@ struct FactoryPart {
   struct Material material;
   float weight;
   float volume;
+  struct String *_id;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-void add_parts(Elasticsearch *handle, const struct FactoryPart *parts, int32_t count);
+/**
+ * Returns the `count` on success, zero on failure
+ */
+int32_t add_parts(Elasticsearch *handle, struct FactoryPart *parts, int32_t count);
 
 void close_client(Elasticsearch *handle);
 
-const uint8_t *create_document(Elasticsearch *handle, const char *name);
-
 Elasticsearch *init_client(void);
 
+/**
+ * Retrieves all parts from ElasticSearch.
+ *
+ * If no parts are retrieved or an error occured, returns null pointer.
+ * On success returns a valid pointer allocated by malloc
+ */
 struct FactoryPart *retrieve_all(Elasticsearch *handle);
 
 #ifdef __cplusplus
