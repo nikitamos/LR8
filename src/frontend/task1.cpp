@@ -174,7 +174,7 @@ void ShakerSort(els::FactoryPart *a, int count) {
       }
     }
     right = last_swap;
-    for (int i = right; i > left; ++i) {
+    for (int i = right; i > left; --i) {
       if (a[i].count > a[i - 1].count) {
         std::swap(a[i], a[i - 1]);
         last_swap = i - 1;
