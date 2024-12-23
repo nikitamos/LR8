@@ -4,6 +4,7 @@
 
 #include <clocale>
 #include <iostream>
+#include <ostream>
 #include <utility>
 
 #include "backend_api.h"
@@ -31,22 +32,22 @@ bool InputInterface(bool &open, els::FactoryPart *part, int &filled_in) {
   ImGui::SetNextWindowSize(ImVec2(20, 10), ImGuiCond_FirstUseEver);
   ImGui::Begin("Part input", &open);
   ImGui::Text("Part Name");
-  ImGui::InputText("lb0", part->name, sizeof(part->name));
+  ImGui::InputText("##lb0", part->name, sizeof(part->name));
 
   ImGui::NewLine();
   ImGui::Text("Department No.");
-  ImGui::InputInt("lb1", &part->department_no);
+  ImGui::InputInt("##lb1", &part->department_no);
 
   ImGui::NewLine();
   ImGui::Text("Count");
-  ImGui::InputInt("lb2", &part->count);
+  ImGui::InputInt("##lb2", &part->count);
 
   ImGui::NewLine();
   ImGui::Combo("Material", &material, "Steel\0Brass\0");
 
   ImGui::NewLine();
   ImGui::Text("Mass");
-  ImGui::InputFloat("lb3", &part->weight);
+  ImGui::InputFloat("##lb3", &part->weight);
 
   ImGui::NewLine();
   if (material == 0) {
@@ -79,13 +80,92 @@ bool InputInterface(bool &open, els::FactoryPart *part, int &filled_in) {
   }
 
   ImGui::End();
-  part->material.tag = (els::Material_Tag)material;
+  part->material.tag = static_cast<els::Material_Tag>(material);
   return false;
+};
+
+class CustomViewAction;
+void ViewPart(els::FactoryPart &p, int &index, int count, bool &open,
+              CustomViewAction *act = nullptr);
+
+class SearchInput {
+public:
+  SearchInput() { memset(&part_, 0, sizeof(part_)); }
+  void Render(bool &open) {
+    if (IsSubmitted()) {
+      if (res_.count == 0) {
+        ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(20, 10), ImGuiCond_FirstUseEver);
+        ImGui::Begin("SearchResults", &open);
+        ImGui::Text("Nothing found :(");
+        ImGui::End();
+      } else {
+        ViewPart(res_.res[index_], index_, res_.count, open);
+        if (!open) {
+          submit_ = false;
+        }
+      }
+      return;
+    }
+    ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(20, 10), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Win", &open);
+    ImGui::Combo("##FieldCombo", &field_,
+                 "Name\0Department\0Weight\0Material\0Volume\0Count\0");
+    ImGui::NewLine();
+    switch (field_) {
+    case 0:
+      preview_ = "Name";
+      ImGui::InputText("##LIAUSTF", part_.name, sizeof(part_.name));
+      break;
+    case 1:
+      preview_ = "Department";
+      ImGui::InputInt("##er;orty", &part_.department_no);
+      break;
+    case 2:
+      preview_ = "Weight";
+      ImGui::InputFloat("##:LKUAry934y", &part_.weight);
+      break;
+    case 3:
+      preview_ = "Material";
+      break;
+    case 4:
+      preview_ = "Volume";
+      ImGui::InputFloat("##sldfih", &part_.volume);
+      break;
+    case 5:
+      preview_ = "Count";
+      ImGui::InputInt("##eqeitj", &part_.count);
+      break;
+    default:
+      break;
+    }
+    ImGui::NewLine();
+    if (ImGui::Button("Submit")) {
+      submit_ = true;
+      open = false;
+    }
+    ImGui::End();
+  }
+
+  void Send(Elasticsearch *client) {
+    res_ = els::search_for_part(client, &part_, field_);
+  }
+  bool IsSubmitted() const { return submit_; }
+  void Deallocate() { els::free_all_parts(&res_.res, &res_.count); }
+
+private:
+  els::FactoryPart part_;
+  int field_ = 0;
+  int index_ = 0;
+  bool submit_ = false;
+  const char *preview_ = "Select the field for search";
+  els::PartSearchResult res_{nullptr, 0};
 };
 
 class CustomViewAction {
 public:
-  constexpr CustomViewAction(const char *button_text) : text_(button_text) {}
+  explicit CustomViewAction(const char *button_text) : text_(button_text) {}
   virtual void Execute(int &index, els::FactoryPart &part) = 0;
   void Render(int &index, els::FactoryPart &part) {
     if (ImGui::Button(text_)) {
@@ -108,7 +188,8 @@ public:
     for (int i = index; i < size_ - 1; ++i) {
       std::memcpy(array_ + i, array_ + i + 1, sizeof(els::FactoryPart));
     }
-    array_ = (els::FactoryPart *)realloc(array_, (--filled_in_, --size_));
+    array_ = static_cast<els::FactoryPart *>(
+        realloc(array_, (--filled_in_, --size_)));
   }
 
 private:
@@ -119,7 +200,7 @@ private:
 };
 
 void ViewPart(els::FactoryPart &p, int &index, int count, bool &open,
-              CustomViewAction *act = nullptr) {
+              CustomViewAction *act) {
   ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize(ImVec2(20, 10), ImGuiCond_FirstUseEver);
   ImGui::Begin("Viewing the Part", &open);
@@ -141,7 +222,7 @@ void ViewPart(els::FactoryPart &p, int &index, int count, bool &open,
       --index;
     }
   }
-  if (act) {
+  if (act != nullptr) {
     ImGui::SameLine();
     act->Render(index, p);
   }
@@ -208,7 +289,10 @@ void DrawMenuWindow(Action &curr_action, bool &win_open, bool &action_win_open,
         curr_action = kViewWhole;
         action_win_open = true;
       }
-      ImGui::MenuItem("Search"); // Это шлет запрос
+      if (ImGui::MenuItem("Search")) {
+        curr_action = kViewSearch;
+        action_win_open = true;
+      }
       if (ImGui::MenuItem("Sort")) {
         ShakerSort(array, filled_in);
         curr_action = kViewWhole;
@@ -217,7 +301,7 @@ void DrawMenuWindow(Action &curr_action, bool &win_open, bool &action_win_open,
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Modify")) {
-      ImGui::MenuItem("Item");   // Сначала ввести условие
+      ImGui::MenuItem("Item"); // Сначала ввести условие
       if (ImGui::MenuItem("Remove")) {
         curr_action = kModifyRemove;
         action_win_open = true;
@@ -244,6 +328,8 @@ int main() {
   }
   // Here fetch existing items
   els::FactoryPart *array = nullptr;
+  SearchInput search_input;
+
   CustomViewAction *view_action = nullptr;
   int old_size = 0;
   int array_size = 0;
@@ -261,8 +347,8 @@ int main() {
   DeleteAction action_remove(client, array, array_size, filled_in);
 
   IMGUI_CHECKVERSION();
-  auto ctx = ImGui::CreateContext();
-  auto screen = ImTui_ImplNcurses_Init(true, 60);
+  auto *ctx = ImGui::CreateContext();
+  auto *screen = ImTui_ImplNcurses_Init(true, 60);
   ImTui_ImplText_Init();
 
   bool win_open = true;
@@ -281,7 +367,7 @@ int main() {
     switch (curr_action) {
     case kInputTheCount:
       if (action_win_open) {
-        int add_size;
+        int add_size = 2;
         ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(45, 20), ImGuiCond_FirstUseEver);
 
@@ -291,8 +377,8 @@ int main() {
           if (add_size == 0) {
             curr_action = kNoAction;
           } else {
-            els::FactoryPart *new_arr = (els::FactoryPart *)realloc(
-                array, sizeof(els::FactoryPart) * (array_size + add_size));
+            els::FactoryPart *new_arr = static_cast<els::FactoryPart *>(realloc(
+                array, sizeof(els::FactoryPart) * (array_size + add_size)));
             if (new_arr == nullptr) {
               ImGui::Text("Unable to reallocate memory");
             } else {
@@ -323,8 +409,8 @@ int main() {
                // memory
         array_size = old_size;
         filled_in = old_size;
-        array = (els::FactoryPart *)realloc(
-            array, array_size * sizeof(els::FactoryPart));
+        array = static_cast<els::FactoryPart *>(
+            realloc(array, array_size * sizeof(els::FactoryPart)));
         curr_action = kNoAction;
       }
       break;
@@ -338,7 +424,19 @@ int main() {
       }
       break;
     case kViewSearch:
+      if (action_win_open) {
+        int index = 0;
+        search_input.Render(action_win_open);
+      } else {
+        if (search_input.IsSubmitted()) {
+          search_input.Send(client);
+          action_win_open = true;
+        } else {
+          curr_action = kNoAction;
+        }
+      }
     case kModifyItem:
+      break;
     case kModifyRemove:
       if (action_win_open) {
         ViewPart(array[curr_item], curr_item, filled_in, action_win_open,

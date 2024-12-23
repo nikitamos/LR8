@@ -2,8 +2,10 @@ use core::{slice, str};
 use elasticsearch::*;
 use log::{error, info, trace};
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
+use serde_json::{json, Value as JsonValue};
 use std::alloc::{self, Allocator};
+use std::array;
+use std::collections::HashMap;
 use std::ptr::{null_mut, NonNull};
 
 use crate::{create_index, delete_index, send_bulk, send_delete, send_search, BufferString, ElasticId, TASK1_INDEX};
@@ -123,11 +125,13 @@ pub extern "C" fn retrieve_all(
 /// The `array` pointer is set to null, `size` is set to zero
 #[no_mangle]
 unsafe extern "C" fn free_all_parts(array: &mut *mut FactoryPart, count: &mut i32) {
+    if *count == 0 || array.is_null() {
+        return;
+    }
     let allocator = alloc::System;
     let layout = alloc::Layout::array::<FactoryPart>(*count as usize)
         .expect("Failed to deallocate an array!");
     let sliced = slice::from_raw_parts_mut(*array, *count as usize);
-
     for part in sliced {
         drop(part._id.take())
     }
@@ -161,6 +165,68 @@ unsafe extern "C" fn delete_all_from_index(
         None => {
             error!("Index deleted, but could not be recreated!");
             0
+        }
+    }
+}
+
+#[repr(C)]
+pub struct PartSearchResult {
+    pub res: *mut FactoryPart,
+    pub count: i32,
+}
+
+fn get_part_field(part: &mut FactoryPart, field: i32) -> JsonValue {
+    match field {
+        0 => json!({"name": part.name}),
+        1 => json!({"department_no": part.department_no}),
+        2 => json!({"weight": part.weight}),
+        3 => json!({"material": part.material}),
+        4 => json!({"volume": part.volume}),
+        5 => json!({"count": part.count}),
+        _ => panic!("Wrong Field!"),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn search_for_part(
+    handle: &mut Elasticsearch,
+    part: &mut FactoryPart,
+    field: i32,
+) -> PartSearchResult {
+    let body = json!({
+        "query": {
+            "match": get_part_field(part, field)
+        }
+    });
+    let req = handle.search(SearchParts::Index(&[TASK1_INDEX])).body(body);
+    match send_search(req) {
+        Some(res) => {
+            let count = res.count();
+            info!("Search succeeded, found {} documents", res.count());
+            let allocator = alloc::System;
+            let layout =
+                alloc::Layout::array::<FactoryPart>(count).expect("Failed to allocate memory");
+            if let Ok(ptr) = allocator.allocate(layout) {
+                let ptr: *mut FactoryPart = ptr.as_mut_ptr().cast();
+                unsafe { res.populate_array(ptr, count as i32) };
+                PartSearchResult {
+                    res: ptr,
+                    count: count as i32,
+                }
+            } else {
+                error!("Failed to allocate memory!");
+                PartSearchResult {
+                    res: null_mut(),
+                    count: 0,
+                }
+            }
+        }
+        None => {
+            error!("Search failed!");
+            PartSearchResult {
+                res: null_mut(),
+                count: 0,
+            }
         }
     }
 }

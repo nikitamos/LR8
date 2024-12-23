@@ -189,7 +189,7 @@ pub fn send_bulk<T: Serialize>(
 }
 
 #[must_use]
-pub fn send_search<'a, 'b, C: Body>(request: Search<'a, 'b, C>) -> Option<SearchResult> {
+pub fn send_search<C: Body>(request: Search<'_, '_, C>) -> Option<SearchResult> {
     match wait4(request.send()) {
         Ok(resp) => {
             if !resp.status_code().is_success() {

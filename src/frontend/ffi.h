@@ -59,6 +59,11 @@ struct FactoryPart {
   struct String *_id;
 };
 
+struct PartSearchResult {
+  struct FactoryPart *res;
+  int32_t count;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -97,6 +102,10 @@ Elasticsearch *init_client(void);
  * On success returns a valid pointer allocated by malloc
  */
 void retrieve_all(Elasticsearch *handle, struct FactoryPart **parts, int32_t *size);
+
+struct PartSearchResult search_for_part(Elasticsearch *handle,
+                                        struct FactoryPart *part,
+                                        int32_t field);
 
 #ifdef __cplusplus
 }  // extern "C"
