@@ -128,6 +128,16 @@ public:
       break;
     case 3:
       preview_ = "Material";
+      ImGui::Combo("##MaterialCombo", &material_tag_, "Steel\0Brass\0");
+      if (material_tag_ == 0) {
+        ImGui::Text("Mark");
+        ImGui::SameLine();
+        ImGui::InputInt("##as;eor", &part_.material.steel);
+      } else {
+        ImGui::Text("Copper percentage");
+        ImGui::SameLine();
+        ImGui::InputFloat("##w[0sfdugh]", &part_.material.brass);
+      }
       break;
     case 4:
       preview_ = "Volume";
@@ -151,11 +161,38 @@ public:
   void Send(Elasticsearch *client) {
     res_ = els::search_for_part(client, &part_, field_);
   }
+  bool IsMatch(els::FactoryPart &part) const {
+    switch (field_) {
+    case 0:
+      return std::strcmp(part.name, part_.name) != 0;
+    case 1:
+      return part.department_no == part_.department_no;
+    case 2:
+      return part.weight == part_.weight;
+    case 3:
+      if (part_.material.tag == part.material.tag) {
+        if (part.material.tag == els::Material_Tag::Steel) {
+          return part_.material.steel == part.material.steel;
+        }
+        return part_.material.brass == part.material.brass;
+      }
+      return false;
+    case 4:
+      return part.volume == part_.volume;
+    case 5:
+      return part.count == part_.count;
+    default:
+      std::cerr << "WARNING: ...\n";
+      return false;
+    }
+  }
+  bool Unsubmit() { submit_ = false; }
   bool IsSubmitted() const { return submit_; }
   void Deallocate() { els::free_all_parts(&res_.res, &res_.count); }
 
 private:
   els::FactoryPart part_;
+  int material_tag_ = 0;
   int field_ = 0;
   int index_ = 0;
   bool submit_ = false;
@@ -276,11 +313,14 @@ void DrawMenuWindow(Action &curr_action, bool &win_open, bool &action_win_open,
 
   if (ImGui::BeginMenuBar()) {
     if (ImGui::BeginMenu("Input")) {
-      if (ImGui::MenuItem("Specific count")) {
+      if (ImGui::MenuItem("The count")) {
         action_win_open = true;
         curr_action = kInputTheCount;
       }
-      ImGui::MenuItem("Until met...");
+      if (ImGui::MenuItem("Until condition")) {
+        action_win_open = true;
+        curr_action = kInputUntil;
+      }
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("View")) {
@@ -317,16 +357,17 @@ void DrawMenuWindow(Action &curr_action, bool &win_open, bool &action_win_open,
 }
 
 int main() {
-#ifndef NDEBUG
   std::cout << "Waiting for debugger";
   getchar();
-#endif
+
   Elasticsearch *client = els::init_client();
   if (client == nullptr) {
     std::cout << "Error creating Elasticsearch client\n";
     return 1;
   }
-  // Here fetch existing items
+
+  els::FactoryPart buffer;
+  memset(&buffer, 0, sizeof(buffer));
   els::FactoryPart *array = nullptr;
   SearchInput search_input;
 
@@ -415,7 +456,16 @@ int main() {
       }
       break;
     case kInputUntil:
-      break;
+      if (action_win_open) {
+        search_input.Render(action_win_open);
+      } else {
+        if (search_input.IsSubmitted()) {
+          int x;
+          InputInterface(action_win_open, &buffer, x);
+        } else {
+          curr_action = kNoAction;
+        }
+      }
     case kViewWhole:
       if (action_win_open) {
         ViewPart(array[curr_item], curr_item, filled_in, action_win_open);

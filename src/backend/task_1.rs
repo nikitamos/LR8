@@ -4,8 +4,6 @@ use log::{error, info, trace};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 use std::alloc::{self, Allocator};
-use std::array;
-use std::collections::HashMap;
 use std::ptr::{null_mut, NonNull};
 
 use crate::{create_index, delete_index, send_bulk, send_delete, send_search, BufferString, ElasticId, TASK1_INDEX};
