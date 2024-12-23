@@ -70,6 +70,18 @@ int32_t add_parts(Elasticsearch *handle, struct FactoryPart *parts, int32_t coun
 
 void close_client(Elasticsearch *handle);
 
+/**
+ * Returns `1` on success, `0` on error
+ */
+int32_t delete_all_from_index(Elasticsearch *handle, struct FactoryPart **array, int32_t *count);
+
+/**
+ * Deletes all parts in the array.
+ * It call an inner destructor and frees the memory
+ * The `array` pointer is set to null, `size` is set to zero
+ */
+void free_all_parts(struct FactoryPart **array, int32_t *count);
+
 Elasticsearch *init_client(void);
 
 /**

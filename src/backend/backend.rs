@@ -126,7 +126,7 @@ impl BulkResult {
 #[derive(Deserialize, Debug)]
 pub struct SearchHits {
     pub total: JsonValue,
-    pub max_score: f32,
+    pub max_score: Option<f32>,
     pub hits: Vec<JsonValue>,
 }
 
@@ -135,13 +135,14 @@ pub struct SearchResult {
     pub took: i32,
     pub timed_out: bool,
     pub hits: SearchHits,
+    // pub _shard: Option<JsonValue>,
 }
 
 impl SearchResult {
     pub fn count(&self) -> usize {
         self.hits.total["value"].as_u64().unwrap() as usize
     }
-    pub fn max_score(&self) -> f32 {
+    pub fn max_score(&self) -> Option<f32> {
         self.hits.max_score
     }
     pub unsafe fn populate_array<T: for<'a> Deserialize<'a> + ElasticId>(

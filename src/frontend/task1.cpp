@@ -204,7 +204,10 @@ void DrawMenuWindow(Action &curr_action, bool &win_open, bool &action_win_open,
     }
     if (ImGui::BeginMenu("Modify")) {
       ImGui::MenuItem("Item");   // Сначала ввести условие
-      ImGui::MenuItem("Remove"); // Аналогично
+      if (ImGui::MenuItem("Remove")) {
+        curr_action = kModifyRemove;
+        action_win_open = true;
+      }
       if (ImGui::MenuItem("Remove all")) {
         curr_action = kModifyRemoveAll;
       }
@@ -329,11 +332,13 @@ int main() {
       }
       break;
     case kModifyRemoveAll:
-      // послать запрос
       filled_in = 0;
-      array_size = 0;
-      free(array);
-      array = nullptr;
+      curr_item = 0;
+      if (els::delete_all_from_index(client, &array, &array_size) != 1) {
+        exit(1);
+      } else {
+        curr_action = kNoAction;
+      }
       break;
     case kNoAction:
       action_win_open = false;
@@ -350,7 +355,7 @@ int main() {
   ImTui_ImplText_Shutdown();
   ImTui_ImplNcurses_Shutdown();
 
-  free(array);
+  els::free_all_parts(&array, &array_size);
   els::close_client(client);
 
   return 0;

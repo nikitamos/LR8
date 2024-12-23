@@ -4,9 +4,9 @@ use log::{error, info, trace};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::alloc::{self, Allocator};
-use std::ptr::null_mut;
+use std::ptr::{null_mut, NonNull};
 
-use crate::{send_bulk, send_search, BufferString, ElasticId, TASK1_INDEX};
+use crate::{create_index, delete_index, send_bulk, send_search, BufferString, ElasticId, TASK1_INDEX};
 
 #[repr(C, i32)]
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -58,11 +58,10 @@ pub extern "C" fn add_parts(
         )
     };
     let parts = unsafe { slice::from_raw_parts_mut(parts, count as usize) };
-    let operations: Vec<BulkOperation<JsonValue>> =
-        parts
-            .iter()
-            .map(|x| BulkOperation::create(serde_json::to_value(x.clone()).unwrap()).into())
-            .collect();
+    let operations: Vec<BulkOperation<JsonValue>> = parts
+        .iter()
+        .map(|x| BulkOperation::create(serde_json::to_value(x.clone()).unwrap()).into())
+        .collect();
     if let Some(res) = send_bulk(handle, BulkParts::Index(TASK1_INDEX), operations) {
         if res.is_ok() {
             info!("Succeed");
@@ -102,7 +101,7 @@ pub extern "C" fn retrieve_all(
                 if let Ok(ptr) = allocator.allocate(layout) {
                     *parts = ptr.as_mut_ptr().cast();
                     *size = result.count() as i32;
-                    unsafe {result.populate_array(*parts, *size)};
+                    unsafe { result.populate_array(*parts, *size) };
                     // info!("Populated")
                 } else {
                     error!("Failed to allocate memory");
@@ -110,10 +109,54 @@ pub extern "C" fn retrieve_all(
             } else {
                 error!("Failed to allocate memory");
             }
-        },
-        None => error!("Retrieving parts failed")
+        }
+        None => error!("Retrieving parts failed"),
     }
 }
 
-// #[no_mangle]
-// pub extern "C" fn
+/// Deletes all parts in the array.
+/// It call an inner destructor and frees the memory
+/// The `array` pointer is set to null, `size` is set to zero
+#[no_mangle]
+unsafe extern "C" fn free_all_parts(array: &mut *mut FactoryPart, count: &mut i32) {
+    let allocator = alloc::System;
+    let layout = alloc::Layout::array::<FactoryPart>(*count as usize)
+        .expect("Failed to deallocate an array!");
+    let sliced = slice::from_raw_parts_mut(*array, *count as usize);
+
+    for part in sliced {
+        drop(part._id.take())
+    }
+    allocator.deallocate(NonNull::new_unchecked(array.cast()), layout);
+    *array = null_mut();
+    *count = 0;
+}
+
+/// Returns `1` on success, `0` on error
+#[no_mangle]
+unsafe extern "C" fn delete_all_from_index(
+    handle: &mut Elasticsearch,
+    array: &mut *mut FactoryPart,
+    count: &mut i32,
+) -> i32 {
+    free_all_parts(array, count);
+
+    if delete_index(handle, TASK1_INDEX) != 1 {
+        panic!("Error deleting index");
+    }
+    match create_index(handle, TASK1_INDEX, None) {
+        Some(resp) => {
+            if !resp.status_code().is_success() {
+                error!("Index deleted, but could not be recreated");
+                0
+            } else {
+                info!("Index successfully deleted and creted anew");
+                1
+            }
+        },
+        None => {
+            error!("Index deleted, but could not be recreated!");
+            0
+        }
+    }
+}
