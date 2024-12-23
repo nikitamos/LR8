@@ -1,3 +1,4 @@
+#include <cstring>
 #include <imtui/imtui-impl-ncurses.h>
 #include <imtui/imtui.h>
 
@@ -98,11 +99,24 @@ private:
 
 class DeleteAction : public CustomViewAction {
 public:
-  constexpr DeleteAction() : CustomViewAction("Delete") {}
-  virtual void Execute(int &index, els::FactoryPart &part) override {}
-};
+  DeleteAction(Elasticsearch *client, els::FactoryPart *&arr, int &size,
+               int &filled_in)
+      : CustomViewAction("Delete"), array_(arr), size_(size),
+        filled_in_(filled_in), client_(client) {}
+  virtual void Execute(int &index, els::FactoryPart &part) override {
+    els::delete_factory_document(client_, &part);
+    for (int i = index; i < size_ - 1; ++i) {
+      std::memcpy(array_ + i, array_ + i + 1, sizeof(els::FactoryPart));
+    }
+    array_ = (els::FactoryPart *)realloc(array_, (--filled_in_, --size_));
+  }
 
-static constinit DeleteAction action_remove;
+private:
+  els::FactoryPart *&array_;
+  int &size_;
+  int &filled_in_;
+  Elasticsearch *client_;
+};
 
 void ViewPart(els::FactoryPart &p, int &index, int count, bool &open,
               CustomViewAction *act = nullptr) {
@@ -243,6 +257,8 @@ int main() {
     return 1;
   }
   filled_in = array_size;
+
+  DeleteAction action_remove(client, array, array_size, filled_in);
 
   IMGUI_CHECKVERSION();
   auto ctx = ImGui::CreateContext();

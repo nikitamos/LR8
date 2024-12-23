@@ -76,6 +76,12 @@ void close_client(Elasticsearch *handle);
 int32_t delete_all_from_index(Elasticsearch *handle, struct FactoryPart **array, int32_t *count);
 
 /**
+ * Deletes the document from the index and calls the inner destructor
+ * The memory should be cleared manually after caling this function
+ */
+int32_t delete_factory_document(Elasticsearch *handle, struct FactoryPart *doc);
+
+/**
  * Deletes all parts in the array.
  * It call an inner destructor and frees the memory
  * The `array` pointer is set to null, `size` is set to zero

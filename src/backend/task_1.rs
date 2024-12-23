@@ -6,7 +6,7 @@ use serde_json::Value as JsonValue;
 use std::alloc::{self, Allocator};
 use std::ptr::{null_mut, NonNull};
 
-use crate::{create_index, delete_index, send_bulk, send_search, BufferString, ElasticId, TASK1_INDEX};
+use crate::{create_index, delete_index, send_bulk, send_delete, send_search, BufferString, ElasticId, TASK1_INDEX};
 
 #[repr(C, i32)]
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -37,6 +37,10 @@ impl ElasticId for FactoryPart {
 
     fn set_id(&mut self, id: String) {
         self._id = Some(Box::new(id))
+    }
+
+    fn drop_id(&mut self) {
+        drop(self._id.take())
     }
 }
 
@@ -153,9 +157,29 @@ unsafe extern "C" fn delete_all_from_index(
                 info!("Index successfully deleted and creted anew");
                 1
             }
-        },
+        }
         None => {
             error!("Index deleted, but could not be recreated!");
+            0
+        }
+    }
+}
+
+/// Deletes the document from the index and calls the inner destructor
+/// The memory should be cleared manually after caling this function
+#[no_mangle]
+pub extern "C" fn delete_factory_document(
+    handle: &mut Elasticsearch,
+    doc: &mut FactoryPart,
+) -> i32 {
+    match send_delete(handle.delete(DeleteParts::IndexId(TASK1_INDEX, doc.get_id().unwrap()))) {
+        Some(_) => {
+            info!("Document {} deleted", doc.get_id().unwrap());
+            doc.drop_id();
+            1
+        }
+        None => {
+            error!("Failed to delete the document {}", doc.get_id().unwrap());
             0
         }
     }

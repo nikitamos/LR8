@@ -91,6 +91,7 @@ impl<'de> Deserialize<'de> for BufferString {
 pub trait ElasticId {
     fn get_id(&self) -> Option<&str>;
     fn set_id(&mut self, id: String);
+    fn drop_id(&mut self);
 }
 
 #[derive(Deserialize)]
@@ -203,6 +204,22 @@ pub fn send_search<'a, 'b, C: Body>(request: Search<'a, 'b, C>) -> Option<Search
             None
         }
     }
+}
+
+#[must_use]
+pub fn send_delete(request: Delete<'_, '_>) -> Option<()> {
+    wait4(request.send())
+        .map_err(|e| error!("Failed to send request: {e}"))
+        .ok()
+        .map(|x| {
+            if x.status_code().is_success() {
+                Some(())
+            } else {
+                error!("Failed to send `delete` request: {}", x.status_code());
+                None
+            }
+        })
+        .unwrap_or(None)
 }
 
 /// Creates an index with explicity mappings.
