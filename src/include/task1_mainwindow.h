@@ -17,7 +17,7 @@ enum Action {
   kViewWhole,
   kViewSearch,
   kModifyItem,
-  kModifyRemove,
+  kDeleteDocs,
   kModifyRemoveAll,
   kWait,
   kInputProperty,
@@ -50,11 +50,16 @@ public slots:
   void IndexCreateFailed();
 
   void SendSearch(QJsonObject obj);
+  void SendSearchDelete(QJsonObject obj);
+
+  void DeleteSucceed();
+  void DeleteFailed();
 
 private:
   void FreeArray();
   Qlastic *qls_;
   QlBulkCreateDocuments create_{"task1_factory"};
+  QlBulkDeleteDocuments delete_{"task1_factory"};
   QlSearch search_{"task1_factory", QJsonDocument()};
   QlDeleteIndex index_delete_{"task1_factory"};
   QlCreateIndex index_create_{"task1_factory"};
@@ -64,11 +69,12 @@ private:
   void DrawMenuWindow();
   FactoryPart buf_;
   Action curr_action_ = kNoAction;
+  Action next_action_ = kNoAction;
   MetaInput meta_input_{nullptr, "Part input"};
   MetaViewer meta_viewer_;
   MetaFactoryPart part_wrapper_;
+  [[deprecated]]
   bool action_win_open_;
-  // bool win_open_ = true;
   FactoryPart *array_ = nullptr;
   int array_size_ = 0;
   int filled_in_ = 0;

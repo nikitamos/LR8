@@ -127,12 +127,29 @@ private:
   QVector<QJsonDocument> docs_;
 };
 
+class QlBulkDeleteDocuments : public QlasticOperation {
+  Q_OBJECT
+public:
+  explicit QlBulkDeleteDocuments(QString index) : index_(index) {}
+  void AddDocument(QString id) { ids_.push_back(id); }
+  void ClearBody() { ids_.clear(); }
+  virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
+  virtual void RequestFinished() override;
+
+signals:
+  void Success();
+  void Failure();
+
+private:
+  QString index_;
+  QVector<QString> ids_;
+};
+
 class Qlastic : public QObject {
   Q_OBJECT
 public:
   explicit Qlastic(QUrl serv, QObject *parent = nullptr);
   virtual ~Qlastic() {};
-  bool IsPendingRequest() const { return is_pending_; }
 
 signals:
   void Send(QlasticOperation *op);

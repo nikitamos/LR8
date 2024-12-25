@@ -217,7 +217,7 @@ void Task1Window::Render() {
   case kModifyItem:
     // field_selector_.Render();
     break;
-  case kModifyRemove:
+  case kDeleteDocs:
     property_selector_.Render();
     // if (action_win_open) {
     //   ViewPart(array[curr_item], curr_item, filled_in, action_win_open,
@@ -282,6 +282,13 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::CancelAction);
   QObject::connect(&property_selector_, &FieldValueSelector::Search, this,
                    &Task1Window::SendSearch);
+  QObject::connect(&property_selector_, &FieldValueSelector::Delete, this,
+                   &Task1Window::SendSearchDelete);
+
+  QObject::connect(&delete_, &QlBulkDeleteDocuments::Success, this,
+                   &Task1Window::DeleteSucceed);
+  QObject::connect(&delete_, &QlBulkDeleteDocuments::Failure, this,
+                   &Task1Window::DeleteFailed);
   qls_->Send(&search_);
   curr_action_ = kWait;
 }
@@ -306,8 +313,7 @@ void Task1Window::ChangeWrapped(int index) {
 }
 
 void Task1Window::SearchSucceed(QJsonObject res) {
-  curr_action_ = kNoAction;
-  text_ += "Search succeed\n";
+  text_ += "Search succeed. ";
   FreeArray();
   array_size_ = res["hits"].toObject()["total"].toObject()["value"].toInt();
   filled_in_ = array_size_;
@@ -315,6 +321,7 @@ void Task1Window::SearchSucceed(QJsonObject res) {
     text_ += "Nothing found\n";
     return;
   }
+  text_ += std::format("{} found\n", filled_in_);
   array_ = (FactoryPart *)malloc(sizeof(FactoryPart) * array_size_);
   if (array_ == nullptr) {
     QCoreApplication::exit(1);
@@ -324,6 +331,17 @@ void Task1Window::SearchSucceed(QJsonObject res) {
   for (int i = 0; i < vals.count(); ++i) {
     auto val = vals.at(i).toObject();
     DeserializePart(array_ + i, val);
+  }
+  curr_action_ = next_action_;
+  next_action_ = kNoAction;
+  if (curr_action_ == kDeleteDocs) {
+    delete_.ClearBody();
+    for (int i = 0; i < filled_in_; ++i) {
+      delete_.AddDocument(*array_[i]._id);
+    }
+    FreeArray();
+    curr_action_ = kWait;
+    qls_->Send(&delete_);
   }
 }
 void Task1Window::SearchFailed() {
@@ -342,6 +360,7 @@ void Task1Window::FreeArray() {
   filled_in_ = 0;
   array_size_ = 0;
   free(array_);
+  array_ = nullptr;
 }
 
 void Task1Window::IndexDeleted() {
@@ -363,6 +382,24 @@ void Task1Window::IndexCreateFailed() {
 }
 
 void Task1Window::SendSearch(QJsonObject obj) {
+  curr_action_ = kWait;
+  next_action_ = kNoAction;
   search_.SetBody(QJsonDocument(obj).toJson(QJsonDocument::Compact));
   qls_->Send(&search_);
+}
+
+void Task1Window::SendSearchDelete(QJsonObject obj) {
+  curr_action_ = kWait;
+  next_action_ = kDeleteDocs;
+  search_.SetBody(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+  qls_->Send(&search_);
+}
+
+void Task1Window::DeleteSucceed() {
+  curr_action_ = kNoAction;
+  text_ += "Deletion succeed. You can select the other documents\n";
+}
+void Task1Window::DeleteFailed() {
+  curr_action_ = kNoAction;
+  text_ += "Deletion failed.\n";
 }

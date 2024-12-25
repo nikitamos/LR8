@@ -2,6 +2,8 @@
 #include <qabstractsocket.h>
 #include <qhttp2configuration.h>
 #include <qjsondocument.h>
+#include <qjsonobject.h>
+#include <qjsonvalue.h>
 #include <qlogging.h>
 #include <qnamespace.h>
 #include <qnetworkaccessmanager.h>
@@ -77,6 +79,43 @@ void QlBulkCreateDocuments::RequestFinished() {
       }
       qDebug() << "new ids: " << ids;
       emit Success(ids);
+    }
+  }
+  repl_->deleteLater();
+  repl_ = nullptr;
+}
+
+void QlBulkDeleteDocuments::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
+  base_url.setPath("/" + index_ + "/_bulk");
+  QNetworkRequest req(base_url);
+  req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+  QString body;
+  for (auto &id : ids_) {
+    // clang-format off
+    body += QJsonDocument(QJsonObject{{
+      "delete", QJsonObject{{
+        "_id", id
+      }}
+    }}).toJson(QJsonDocument::Compact) + "\n";
+    // clang-format on
+  }
+  std::cerr << body.toStdString() << '\n';
+  SetupReply(mgr.post(req, body.toUtf8()));
+  ids_.clear();
+}
+
+void QlBulkDeleteDocuments::RequestFinished() {
+  std::cerr << QJsonDocument::fromJson(repl_->readAll()).toJson().toStdString()
+            << '\n';
+  if (repl_->error() != 0) {
+    emit Failure();
+  } else {
+    QJsonObject items = QJsonDocument::fromJson(repl_->readAll()).object();
+    if (items["errors"].toBool()) {
+      emit Failure();
+    } else {
+      emit Success();
     }
   }
   repl_->deleteLater();
