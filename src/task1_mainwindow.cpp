@@ -2,7 +2,6 @@
 #include "backend_api.h"
 #include "metamagic.h"
 #include "qlastic.h"
-#include "serializer.h"
 #include "task1part.h"
 #include <cstdlib>
 #include <format>
@@ -110,10 +109,6 @@ void Task1Window::DrawMenuWindow() {
         curr_action_ = kViewWhole;
         action_win_open_ = true;
       }
-      if (ImGui::MenuItem("Search")) {
-        curr_action_ = kViewSearch;
-        action_win_open_ = true;
-      }
       if (ImGui::MenuItem("Sort")) {
         ShakerSort(array_, filled_in_);
         curr_action_ = kViewWhole;
@@ -121,15 +116,9 @@ void Task1Window::DrawMenuWindow() {
       }
       ImGui::EndMenu();
     }
-    if (ImGui::BeginMenu("Modify")) {
-      ImGui::MenuItem("Item"); // Сначала ввести условие
-      if (ImGui::MenuItem("Remove")) {
-        curr_action_ = kModifyRemove;
-        action_win_open_ = true;
-      }
-      if (ImGui::MenuItem("Remove all")) {
-        curr_action_ = kModifyRemoveAll;
-      }
+    if (ImGui::BeginMenu("Select Items")) {
+      curr_action_ = kInputProperty;
+      property_selector_.SetOpen(true);
       ImGui::EndMenu();
     }
     ImGui::EndMenuBar();
@@ -229,7 +218,7 @@ void Task1Window::Render() {
     // field_selector_.Render();
     break;
   case kModifyRemove:
-    field_selector_.Render();
+    property_selector_.Render();
     // if (action_win_open) {
     //   ViewPart(array[curr_item], curr_item, filled_in, action_win_open,
     //            &action_remove);
@@ -252,14 +241,14 @@ void Task1Window::Render() {
     ImGui::End();
     break;
   case kInputProperty:
-    field_selector_.Render();
+    property_selector_.Render();
     break;
   }
 }
 
 Task1Window::Task1Window(Qlastic *qls, QObject *parent)
     : Window(parent), part_wrapper_(&buf_), qls_(qls),
-      field_selector_(MetaFactoryPart::staticMetaObject.metaType()) {
+      property_selector_(MetaFactoryPart::staticMetaObject.metaType()) {
   meta_input_.SetTarget(&part_wrapper_);
   QObject::connect(&meta_input_, &MetaInput::Submit, this,
                    &Task1Window::PartInputSubmitted);
@@ -274,7 +263,7 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
   QObject::connect(&meta_viewer_, &MetaViewer::Previous, this,
                    &Task1Window::ChangeWrapped);
   QObject::connect(&meta_viewer_, &MetaViewer::Closed, this,
-                   &Task1Window::ViewerClosed);
+                   &Task1Window::CancelAction);
   QObject::connect(&search_, &QlSearch::Success, this,
                    &Task1Window::SearchSucceed);
   QObject::connect(&search_, &QlSearch::Failure, this,
@@ -288,6 +277,11 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::IndexCreated);
   QObject::connect(&index_create_, &QlCreateIndex::Failure, this,
                    &Task1Window::IndexCreateFailed);
+
+  QObject::connect(&property_selector_, &FieldValueSelector::Cancel, this,
+                   &Task1Window::CancelAction);
+  QObject::connect(&property_selector_, &FieldValueSelector::Search, this,
+                   &Task1Window::SendSearch);
   qls_->Send(&search_);
   curr_action_ = kWait;
 }
@@ -305,7 +299,7 @@ void Task1Window::PartsCreationFailed() {
   PartInputCancelled();
 }
 
-void Task1Window::ViewerClosed() { curr_action_ = kNoAction; }
+void Task1Window::CancelAction() { curr_action_ = kNoAction; }
 
 void Task1Window::ChangeWrapped(int index) {
   part_wrapper_.SetTarget(array_ + index);
@@ -366,4 +360,9 @@ void Task1Window::IndexCreated() {
 void Task1Window::IndexCreateFailed() {
   text_ += "Failed to create index\n";
   curr_action_ = kNoAction;
+}
+
+void Task1Window::SendSearch(QJsonObject obj) {
+  search_.SetBody(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+  qls_->Send(&search_);
 }

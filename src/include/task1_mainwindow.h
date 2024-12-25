@@ -38,7 +38,7 @@ public slots:
   void PartsCreationFailed();
 
   void ChangeWrapped(int index);
-  void ViewerClosed();
+  void CancelAction();
 
   void SearchSucceed(QJsonObject res);
   void SearchFailed();
@@ -49,6 +49,8 @@ public slots:
   void IndexCreated();
   void IndexCreateFailed();
 
+  void SendSearch(QJsonObject obj);
+
 private:
   void FreeArray();
   Qlastic *qls_;
@@ -56,7 +58,7 @@ private:
   QlSearch search_{"task1_factory", QJsonDocument()};
   QlDeleteIndex index_delete_{"task1_factory"};
   QlCreateIndex index_create_{"task1_factory"};
-  FieldValueSelector field_selector_;
+  FieldValueSelector property_selector_;
 
   std::string text_{"Was mich nicht umbringt, macht mich staerker.\n"};
   void DrawMenuWindow();

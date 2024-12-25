@@ -3,6 +3,7 @@
 #include "qjsonarray.h"
 #include "serializer.h"
 #include <QNetworkAccessManager>
+#include <QUrlQuery>
 #include <iostream>
 #include <qjsondocument.h>
 #include <qjsonobject.h>
@@ -84,14 +85,19 @@ public:
       : index_(index), body_(body.toJson()) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override {
+    auto x = repl_->readAll();
     if (repl_->error() != 0) {
+      std::cerr << x.toStdString();
       emit Failure();
     } else {
-      auto res = QJsonDocument::fromJson(repl_->readAll());
+      auto res = QJsonDocument::fromJson(x);
       emit Success(res.object());
     }
     repl_->deleteLater();
   }
+  void SetBody(QString body) { body_ = body; }
+  void SetParams(QString params) { params_ = params; }
+  void SetParams(QUrlQuery q) { params_ = q.toString(); }
 signals:
   void Failure();
   void Success(QJsonObject res);

@@ -1,5 +1,6 @@
 #include "metamagic.h"
 #include "imgui/imgui.h"
+#include <qjsonobject.h>
 #include <qlogging.h>
 #include <qmetaobject.h>
 #include <qobject.h>
@@ -144,5 +145,102 @@ void MetaViewer::Render() {
     if (ImGui::Button("Finish")) {
       Close();
     }
+  }
+}
+
+FieldValueSelector::FieldValueSelector(QMetaType mt) : selected_(0) {
+  label_ = "##" + std::to_string(Input::rand());
+  SetPrototype(mt);
+}
+void FieldValueSelector::SetPrototype(QMetaType m) {
+  const auto *mobj = m.metaObject();
+  proto_ = m;
+  ClearInput();
+  inputs_.clear();
+
+  for (int i = 1; i < mobj->propertyCount(); ++i) {
+    std::string normalized = StringifySnakeCase(mobj->property(i).name());
+    Input *inp =
+        Input::FromType(mobj->property(i).metaType(), mobj->property(i).name());
+    if (inp != nullptr) {
+      inputs_.push_back(inp);
+    }
+  }
+}
+
+void FieldValueSelector::Render(const char *name) {
+  if (!open_) {
+    emit Cancel();
+  }
+  ImGui::Begin(name, &open_);
+  if (ImGui::Checkbox("Select All", &all_) || all_) {
+  } else {
+    if (ImGui::NewLine(),
+        ImGui::BeginCombo(label_.c_str(), inputs_[selected_]->text.c_str())) {
+      for (int i = 0; i < inputs_.size(); ++i) {
+        bool selected;
+        if (ImGui::Selectable(inputs_[i]->text.c_str())) {
+          selected_ = i;
+        }
+        if (i == selected_) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndCombo();
+    }
+    inputs_[selected_]->Render();
+    ImGui::NewLine();
+  }
+  if (ImGui::Button("Modify")) {
+    emit Modify(JsonBody());
+    open_ = false;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Delete")) {
+    emit Delete(JsonBody());
+    open_ = false;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Search")) {
+    emit Search(JsonBody());
+    open_ = false;
+  }
+  ImGui::End();
+}
+
+QJsonObject FieldValueSelector::JsonBody() {
+  if (all_) {
+    return QJsonObject();
+  }
+  /*
+  {
+    "query": {
+      "match": {
+        "<FIELD>": {
+          "query" : "<QUERY>"
+        }
+      }
+    }
+  }
+  */
+
+  auto qjsval = inputs_[selected_]->Get().toJsonValue();
+  // clang-format off
+  QJsonObject res2{{
+    "query", QJsonObject{{
+      "match", QJsonObject{{
+          inputs_[selected_]->property_name, QJsonObject{{
+            "query", qjsval
+          }}
+        }}
+      }}
+  }};
+  // clang-format on
+  return res2;
+}
+
+void FieldValueSelector::ClearInput() {
+  for (auto &i : inputs_) {
+    delete i;
   }
 }
