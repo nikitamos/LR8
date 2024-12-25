@@ -91,6 +91,13 @@ void MetaInput::SetTarget(QObject *new_target) {
   }
 }
 
+void MetaInput::PopulateFromTarget(QObject *new_target) {
+  SetTarget(new_target);
+  for (auto &i : this->item_) {
+    i->Set(new_target->property(i->property_name.toUtf8()));
+  }
+}
+
 void MetaInput::Render() {
   if (cancel_) {
     return;
@@ -151,6 +158,10 @@ void MetaViewer::Render() {
   if (ImGui::Button("Delete")) {
     emit Delete(curr_);
   }
+  ImGui::SameLine();
+  if (ImGui::Button("Modify")) {
+    emit Modify(curr_);
+  }
 }
 
 FieldValueSelector::FieldValueSelector(QMetaType mt) : selected_(0) {
@@ -196,8 +207,8 @@ void FieldValueSelector::Render(const char *name) {
     inputs_[selected_]->Render();
     ImGui::NewLine();
   }
-  if (ImGui::Button("Modify")) {
-    emit Modify(JsonBody());
+  if (ImGui::Button("Input until")) {
+    emit MakeInput(JsonBody());
     open_ = false;
   }
   ImGui::SameLine();

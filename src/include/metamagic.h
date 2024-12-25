@@ -38,6 +38,7 @@ struct Input {
   virtual ~Input() {}
   virtual void Render() = 0;
   virtual QVariant Get() = 0;
+  virtual void Set(QVariant val) = 0;
   QString property_name;
   std::string text;
   std::string GetLabel() { return "##" + std::to_string(rand()); }
@@ -50,6 +51,9 @@ template <typename T> struct BufInput : public Input {
   T buf{};
   explicit BufInput(QString name) : Input(name) {}
   virtual QVariant Get() override { return buf; }
+  virtual void Set(QVariant val) override {
+    buf = val.convert(QMetaType::fromType<T>());
+  }
 };
 
 struct StdStringInput : public Input {
@@ -59,6 +63,9 @@ struct StdStringInput : public Input {
     ImGui::InputText(label.c_str(), &buf);
   }
   virtual QVariant Get() override { return QString::fromStdString(buf); }
+  virtual void Set(QVariant val) override {
+    buf = val.toString().toStdString();
+  }
   std::string buf;
 };
 
@@ -114,6 +121,7 @@ public:
       delete it;
     }
   }
+  void PopulateFromTarget(QObject *new_target);
   void SetTarget(QObject *new_target);
   QObject *GetTarget();
 public slots:
@@ -181,7 +189,6 @@ public:
   void SetOpen(bool v) { open_ = v; }
   bool IsOpen() const { return open_; }
 signals:
-  void Modify(QJsonObject);
   void Delete(QJsonObject);
   void Search(QJsonObject);
   void MakeInput(QJsonObject);

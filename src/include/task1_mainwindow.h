@@ -12,7 +12,7 @@
 
 enum Action {
   kInputTheCount,
-  kInputItemsCount,
+  kInputItems,
   kInputUntil,
   kViewWhole,
   kModifyItem,
@@ -30,7 +30,7 @@ public:
   virtual ~Task1Window() { FreeArray(); }
   virtual void Render();
 public slots:
-  void PartInputSubmitted(QObject *part);
+  void PartInputSubmitted(QObject *obj);
   void PartInputCancelled();
 
   void PartsCreated(QVector<QString> ids);
@@ -55,6 +55,11 @@ public slots:
   void DeleteSucceed();
   void DeleteFailed();
 
+  void ModifyItem(int n);
+
+  void UpdateSucceed();
+  void UpdateFailed();
+
 private:
   void FreeArray();
   Qlastic *qls_;
@@ -63,6 +68,7 @@ private:
   QlSearch search_{"task1_factory", QJsonDocument()};
   QlDeleteIndex index_delete_{"task1_factory"};
   QlCreateIndex index_create_{"task1_factory"};
+  QlUpdateDocument update_{"task1_factory"};
   FieldValueSelector property_selector_;
 
   std::string text_{"\"Was mich nicht umbringt, macht mich staerker.\"\n"};

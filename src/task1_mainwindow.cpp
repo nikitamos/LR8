@@ -1,5 +1,4 @@
 #include "task1_mainwindow.h"
-#include "backend_api.h"
 #include "metamagic.h"
 #include "qlastic.h"
 #include "task1part.h"
@@ -11,46 +10,6 @@
 #include <qjsondocument.h>
 #include <qjsonobject.h>
 #include <qobject.h>
-
-class CustomViewAction;
-void ViewPart(FactoryPart &p, int &index, int count, bool &open,
-              CustomViewAction *act = nullptr);
-
-class CustomViewAction {
-public:
-  explicit CustomViewAction(const char *button_text) : text_(button_text) {}
-  virtual void Execute(int &index, els::FactoryPart &part) = 0;
-  void Render(int &index, els::FactoryPart &part) {
-    if (ImGui::Button(text_)) {
-      Execute(index, part);
-    }
-  }
-
-private:
-  const char *text_;
-};
-
-class DeleteAction : public CustomViewAction {
-public:
-  DeleteAction(Elasticsearch *client, els::FactoryPart *&arr, int &size,
-               int &filled_in)
-      : CustomViewAction("Delete"), array_(arr), size_(size),
-        filled_in_(filled_in), client_(client) {}
-  virtual void Execute(int &index, els::FactoryPart &part) override {
-    els::delete_factory_document(client_, &part);
-    for (int i = index; i < size_ - 1; ++i) {
-      std::memcpy(array_ + i, array_ + i + 1, sizeof(els::FactoryPart));
-    }
-    array_ = static_cast<els::FactoryPart *>(
-        realloc(array_, (--filled_in_, --size_)));
-  }
-
-private:
-  els::FactoryPart *&array_;
-  int &size_;
-  int &filled_in_;
-  Elasticsearch *client_;
-};
 
 /// Сортирует массив по убыванию количества
 /// (за что этот алгоритм?)
@@ -132,7 +91,15 @@ void Task1Window::DrawMenuWindow() {
   ImGui::End();
 }
 
-void Task1Window::PartInputSubmitted(QObject * /*unused*/) {
+void Task1Window::PartInputSubmitted(QObject *obj) {
+  if (next_action_ == kModifyItem) {
+    curr_action_ = kWait;
+    next_action_ = kViewWhole;
+    update_.SetObject(obj);
+    qls_->Send(&update_);
+
+    return;
+  }
   ++filled_in_;
   create_.AddDocument(&part_wrapper_);
   if (filled_in_ == array_size_) {
@@ -177,7 +144,7 @@ void Task1Window::Render() {
             old_size_ = array_size_;
             array_size_ += add_size_;
             array_ = new_arr;
-            curr_action_ = kInputItemsCount;
+            curr_action_ = kInputItems;
             curr_item_ = old_size_;
             meta_input_.Reset();
           }
@@ -188,7 +155,7 @@ void Task1Window::Render() {
       curr_action_ = kNoAction;
     }
     break;
-  case kInputItemsCount:
+  case kInputItems:
     meta_input_.Render();
     break;
   case kInputUntil:
@@ -243,6 +210,10 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::PartsCreated);
   QObject::connect(&create_, &QlBulkCreateDocuments::Failure, this,
                    &Task1Window::PartsCreationFailed);
+  QObject::connect(&update_, &QlUpdateDocument::Success, this,
+                   &Task1Window::UpdateSucceed);
+  QObject::connect(&update_, &QlUpdateDocument::Failure, this,
+                   &Task1Window::UpdateFailed);
   QObject::connect(&meta_viewer_, &MetaViewer::Next, this,
                    &Task1Window::ChangeWrapped);
   QObject::connect(&meta_viewer_, &MetaViewer::Previous, this,
@@ -251,6 +222,8 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::CancelAction);
   QObject::connect(&meta_viewer_, &MetaViewer::Delete, this,
                    &Task1Window::DeleteSingleItem);
+  QObject::connect(&meta_viewer_, &MetaViewer::Modify, this,
+                   &Task1Window::ModifyItem);
 
   QObject::connect(&search_, &QlSearch::Success, this,
                    &Task1Window::SearchSucceed);
@@ -411,4 +384,22 @@ void Task1Window::DeleteSingleItem(int n) {
     part_wrapper_.SetTarget(array_ + n - 1);
   }
   qls_->Send(&delete_);
+}
+
+void Task1Window::ModifyItem(int n) {
+  update_.SetId(*array_[n]._id);
+  part_wrapper_.SetTarget(array_ + n);
+  meta_input_.PopulateFromTarget(&part_wrapper_);
+  curr_action_ = kInputItems;
+  next_action_ = kModifyItem;
+}
+void Task1Window::UpdateSucceed() {
+  text_ += "Modify succeed\n";
+  curr_action_ = next_action_;
+  next_action_ = kNoAction;
+}
+void Task1Window::UpdateFailed() {
+  text_ += "Modify failed\n";
+  curr_action_ = next_action_;
+  next_action_ = kNoAction;
 }

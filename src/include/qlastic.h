@@ -42,7 +42,6 @@ public:
   explicit QlCreateIndex(QString index) : index_(index) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override {
-    qDebug() << "CreateIndex req. finish!\n";
     if (repl_->error() != 0) {
       emit Failure(repl_->error());
     } else {
@@ -63,7 +62,6 @@ public:
   explicit QlDeleteIndex(QString index) : index_(index) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override {
-    qDebug() << "CreateIndex req. finish!\n";
     if (repl_->error() != 0) {
       emit Failure(repl_->error());
     } else {
@@ -143,6 +141,30 @@ signals:
 private:
   QString index_;
   QVector<QString> ids_;
+};
+
+class QlUpdateDocument : public QlasticOperation {
+  Q_OBJECT
+public:
+  explicit QlUpdateDocument(QString index, QString id = "")
+      : index_(index), id_(id) {}
+  virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
+  virtual void RequestFinished() override;
+  QlUpdateDocument &SetId(QString id) {
+    id_ = id;
+    return *this;
+  }
+  QlUpdateDocument &SetObject(QObject *obj);
+  QString GetId() const { return id_; }
+
+signals:
+  void Success();
+  void Failure();
+
+private:
+  QString index_;
+  QString id_;
+  QString body_;
 };
 
 class Qlastic : public QObject {

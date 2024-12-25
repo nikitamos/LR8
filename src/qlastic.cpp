@@ -10,6 +10,7 @@
 #include <qnetworkreply.h>
 #include <qnetworkrequest.h>
 #include <qobject.h>
+#include <qtmetamacros.h>
 #include <qurl.h>
 
 Qlastic::Qlastic(QUrl serv, QObject *parent)
@@ -27,14 +28,12 @@ void QlCreateIndex::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
   repl_ = mgr.put(req, "");
   QObject::connect(repl_, &QNetworkReply::finished, this,
                    &QlCreateIndex::RequestFinished);
-  qDebug() << "Exit create index";
 }
 
 void QlDeleteIndex::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
   base_url.setPath("/" + index_);
   QNetworkRequest req(base_url);
   SetupReply(mgr.deleteResource(req));
-  qDebug() << "Exit DeleteIndex";
 }
 
 void QlSearch::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
@@ -118,4 +117,28 @@ void QlBulkDeleteDocuments::RequestFinished() {
   }
   repl_->deleteLater();
   repl_ = nullptr;
+}
+
+void QlUpdateDocument::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
+  QUrl req_url = base_url;
+  req_url.setPath("/" + index_ + "/_update/" + id_, QUrl::StrictMode);
+  QNetworkRequest req(req_url);
+  req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+  SetupReply(mgr.post(req, body_.toUtf8()));
+}
+void QlUpdateDocument::RequestFinished() {
+  std::cerr << QJsonDocument::fromJson(repl_->readAll()).toJson().toStdString()
+            << '\n';
+  if (repl_->error() != 0) {
+    emit Failure();
+  } else {
+    emit Success();
+  }
+}
+QlUpdateDocument &QlUpdateDocument::SetObject(QObject *obj) {
+  QJsonObject body;
+  body["doc"] = Serialize(obj);
+  body_ = QJsonDocument(body).toJson(QJsonDocument::Compact);
+  return *this;
 }
