@@ -1,4 +1,5 @@
 #include "metamagic.h"
+#include <qlogging.h>
 #include <qmetaobject.h>
 #include <qobject.h>
 #include <qvariant.h>
@@ -89,6 +90,9 @@ void MetaInput::SetTarget(QObject *new_target) {
 }
 
 void MetaInput::Render() {
+  if (cancel_) {
+    return;
+  }
   ImGui::Begin(win_name_, &open_);
   for (auto &i : item_) {
     i->Render();
@@ -96,9 +100,45 @@ void MetaInput::Render() {
   if (ImGui::Button("Submit")) {
     Populate();
     emit Submit(t_);
-    open_ = false;
+  } else if (!open_ && !cancel_) {
+    cancel_ = true;
+    emit Cancel();
   }
   ImGui::End();
 }
 
+void MetaInput::Reset() {
+  cancel_ = false;
+  open_ = true;
+}
+
 QObject *MetaInput::GetTarget() { return t_; }
+
+void MetaViewer::Render() {
+  const auto *meta = provider_->metaObject();
+  for (int i = 1; i < meta->propertyCount(); ++i) {
+    auto prop = meta->property(i);
+    if (prop.isReadable()) {
+      std::string item = StringifySnakeCase(prop.name()) + ": ";
+      item += prop.read(provider_).toString().toStdString();
+      ImGui::Text("%s", item.c_str());
+      ImGui::NewLine();
+    }
+  }
+  if (curr_ > 0) {
+    if (ImGui::Button("Previous")) {
+      --curr_;
+      emit Previous(curr_);
+    }
+  }
+  if (curr_ < size_ - 1) {
+    if (ImGui::Button("Next")) {
+      ++curr_;
+      emit Next(curr_);
+    }
+  } else {
+    if (ImGui::Button("Finish")) {
+      Close();
+    }
+  }
+}

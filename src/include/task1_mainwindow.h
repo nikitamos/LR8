@@ -6,6 +6,7 @@
 #include "metamagic.h"
 #include "qlastic.h"
 #include "task1part.h"
+#include "window.h"
 
 enum Action {
   kInputTheCount,
@@ -16,31 +17,35 @@ enum Action {
   kModifyItem,
   kModifyRemove,
   kModifyRemoveAll,
+  kWait,
   kNoAction
 };
 
-class Task1MainWindow : public Window {
+class Task1Window : public Window {
   Q_OBJECT
 public:
-  explicit Task1MainWindow(Qlastic *qls, QObject *parent = nullptr)
-      : Window(parent), part_wrapper_(&buf_), qls_(qls) {
-    meta_input_.SetTarget(&part_wrapper_);
-    QObject::connect(&meta_input_, &MetaInput::Submit, this,
-                     &Task1MainWindow::PartInputSubmitted);
-  }
-  virtual ~Task1MainWindow() {}
+  explicit Task1Window(Qlastic *qls, QObject *parent = nullptr);
+  virtual ~Task1Window() {}
   virtual void Render();
 public slots:
   void PartInputSubmitted(QObject *part);
-  // public slots:
-  //   void Wait();
+  void PartInputCancelled();
+
+  void PartsCreated(QVector<QString> ids);
+  void PartsCreationFailed();
+
+  void ChangeWrapped(int index);
+  void ViewerClosed();
+
 private:
   Qlastic *qls_;
+  std::string text_;
   QlBulkCreateDocuments create_{"task1_factory"};
   void DrawMenuWindow();
   FactoryPart buf_;
   Action curr_action_ = kNoAction;
   MetaInput meta_input_{nullptr, "Part input"};
+  MetaViewer meta_viewer_;
   MetaFactoryPart part_wrapper_;
   bool action_win_open_;
   // bool win_open_ = true;
@@ -49,4 +54,5 @@ private:
   int filled_in_ = 0;
   int old_size_ = 0;
   int curr_item_ = 0;
+  int add_size_ = 2;
 };

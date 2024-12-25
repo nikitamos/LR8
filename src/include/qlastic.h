@@ -1,10 +1,13 @@
 #pragma once
 
+#include "qjsonarray.h"
 #include "serializer.h"
 #include <QNetworkAccessManager>
 #include <functional>
 #include <iostream>
 #include <qjsondocument.h>
+#include <qjsonobject.h>
+#include <qjsonvalue.h>
 #include <qnetworkaccessmanager.h>
 #include <qnetworkreply.h>
 #include <qnetworkrequest.h>
@@ -95,15 +98,14 @@ class QlBulkCreateDocuments : public QlasticOperation {
 public:
   explicit QlBulkCreateDocuments(QString index) : index_(index) {}
   void AddDocument(QObject *doc) {
-    auto tmp = QJsonDocument(Serialize(doc));
-    qDebug() << tmp.toJson(); // TODO: remove tmp
-    docs_.push_back(tmp);
+    docs_.push_back(QJsonDocument(Serialize(doc)));
   }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
-  virtual void RequestFinished() override {
-    std::cerr << "Error: " << repl_->error() << '\n';
-    qDebug() << "Create finished" << repl_->readAll();
-  }
+  virtual void RequestFinished() override;
+
+signals:
+  void Success(QVector<QString> ids);
+  void Failure(QNetworkReply::NetworkError err, int code);
 
 private:
   QString index_;

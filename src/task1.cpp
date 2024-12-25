@@ -13,6 +13,7 @@
 #include <qmetaobject.h>
 #include <qnetworkreply.h>
 #include <qobject.h>
+#include <qtimer.h>
 #include <qvariant.h>
 
 #include "imgui/imgui.h"
@@ -28,23 +29,23 @@ typedef float f32;
 const QString kTask1Index = "task1_factory";
 
 int main(int argc, char **argv) {
-  QCoreApplication app(argc, argv);
+  QCoreApplication app{argc, argv};
   std::cout << "wainting for debugger";
   getchar();
 
   Qlastic qls(QUrl("http://localhost:9200/"));
-  // QlCreateIndex create(kTask1Index);
-  // qls.Send(&create);
 
   IMGUI_CHECKVERSION();
   auto *ctx = ImGui::CreateContext();
   auto *screen = ImTui_ImplNcurses_Init(true, 60);
   ImTui_ImplText_Init();
-  Task1MainWindow mw(&qls);
+  Task1Window mw(&qls);
   mw.SetOpen(true);
   QObject::connect(&mw, &Window::Closed, &app, &QCoreApplication::quit);
 
-  while (mw.IsOpen()) {
+  QTimer timer;
+  QObject::connect(&timer, &QTimer::timeout, [&mw, screen]() {
+    // std::cerr << "Call!\n";
     ImTui_ImplNcurses_NewFrame();
     ImTui_ImplText_NewFrame();
     ImGui::NewFrame();
@@ -57,10 +58,11 @@ int main(int argc, char **argv) {
 
     ImTui_ImplText_RenderDrawData(ImGui::GetDrawData(), screen);
     ImTui_ImplNcurses_DrawScreen();
-  }
+  });
 
-  ImTui_ImplText_Shutdown();
-  ImTui_ImplNcurses_Shutdown();
-
+  // ImTui_ImplText_Shutdown();
+  // ImTui_ImplNcurses_Shutdown();
+  timer.setInterval(1000 / 30);
+  timer.start();
   return QCoreApplication::exec();
 }

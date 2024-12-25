@@ -26,7 +26,7 @@ typedef struct FactoryPart {
   } material;
   float weight;
   float volume;
-  struct String *_id;
+  QString *_id{nullptr};
 } FactoryPart;
 
 class MetaFactoryPart : public QObject {

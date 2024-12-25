@@ -59,3 +59,26 @@ void QlBulkCreateDocuments::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
   SetupReply(mgr.post(req, body.toUtf8()));
   docs_.clear();
 }
+
+void QlBulkCreateDocuments::RequestFinished() {
+  if (repl_->error() != 0) {
+    emit Failure(
+        repl_->error(),
+        repl_->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt());
+  } else {
+    QJsonObject items = QJsonDocument::fromJson(repl_->readAll()).object();
+    if (items["errors"].toBool()) {
+      emit Failure(QNetworkReply::ProtocolFailure, -1);
+    } else {
+      QVector<QString> ids;
+      QJsonArray vals = items["items"].toArray();
+      for (auto v : vals) {
+        ids.push_back(v.toObject()["create"].toObject()["_id"].toString());
+      }
+      qDebug() << "new ids: " << ids;
+      emit Success(ids);
+    }
+  }
+  repl_->deleteLater();
+  repl_ = nullptr;
+}

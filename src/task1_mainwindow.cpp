@@ -1,6 +1,8 @@
 #include "task1_mainwindow.h"
 #include "backend_api.h"
 #include "metamagic.h"
+#include "qlastic.h"
+#include <format>
 #include <imgui/imgui.h>
 #include <qobject.h>
 
@@ -157,48 +159,6 @@ private:
   Elasticsearch *client_;
 };
 
-void ViewPart(els::FactoryPart &p, int &index, int count, bool &open,
-              CustomViewAction *act) {
-  ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSize(ImVec2(20, 10), ImGuiCond_FirstUseEver);
-  ImGui::Begin("Viewing the Part", &open);
-  ImGui::Text("Name: %s", p.name);
-  ImGui::NewLine();
-  ImGui::Text("Department No.: %d", p.department_no);
-  ImGui::NewLine();
-  ImGui::Text("Count: %d", p.count);
-  ImGui::NewLine();
-  if (p.material.tag == els::Steel) {
-    ImGui::Text("Material: Steel, mark: %d", p.material.steel);
-  } else {
-    ImGui::Text("Material: Brass, %f%% Copper", p.material.brass);
-  }
-  ImGui::Text("Volume: ...");
-  ImGui::NewLine();
-  if (index != 0) {
-    if (ImGui::Button("Previous")) {
-      --index;
-    }
-  }
-  if (act != nullptr) {
-    ImGui::SameLine();
-    act->Render(index, p);
-  }
-  if (index != count - 1) {
-    if (index != 0) {
-      ImGui::SameLine();
-    }
-    if (ImGui::Button("Next")) {
-      ++index;
-    }
-  } else {
-    if (ImGui::Button("Finish")) {
-      open = false;
-    }
-  }
-  ImGui::End();
-}
-
 /// Сортирует массив по убыванию количества
 /// (за что этот алгоритм?)
 void ShakerSort(FactoryPart *a, int count) {
@@ -223,7 +183,7 @@ void ShakerSort(FactoryPart *a, int count) {
   }
 }
 
-void Task1MainWindow::DrawMenuWindow() {
+void Task1Window::DrawMenuWindow() {
   auto io = ImGui::GetIO();
   ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x - 6, io.DisplaySize.y - 3),
@@ -245,6 +205,8 @@ void Task1MainWindow::DrawMenuWindow() {
     }
     if (ImGui::BeginMenu("View")) {
       if (ImGui::MenuItem("Whole array") && filled_in_ != 0) {
+        meta_viewer_.SetCollectionSize(filled_in_);
+        meta_viewer_.SetProvider(&part_wrapper_);
         curr_item_ = 0;
         curr_action_ = kViewWhole;
         action_win_open_ = true;
@@ -273,49 +235,58 @@ void Task1MainWindow::DrawMenuWindow() {
     }
     ImGui::EndMenuBar();
   }
+  ImGui::Text("%s", text_.c_str());
   ImGui::End();
 }
 
-void Task1MainWindow::PartInputSubmitted(QObject *part) {
+void Task1Window::PartInputSubmitted(QObject * /*unused*/) {
   ++filled_in_;
   create_.AddDocument(&part_wrapper_);
   if (filled_in_ == array_size_) {
     // Input is finished. Send the data to Elastic
     qls_->Send(&create_);
-    curr_action_ = kNoAction;
+    curr_action_ = kWait;
     curr_item_ = 0;
   } else {
     part_wrapper_.SetTarget(&array_[++curr_item_]);
   }
 }
 
-void Task1MainWindow::Render() {
+void Task1Window::PartInputCancelled() {
+  array_size_ = old_size_;
+  filled_in_ = old_size_;
+  array_ = static_cast<FactoryPart *>(
+      realloc(array_, array_size_ * sizeof(FactoryPart)));
+  curr_action_ = kNoAction;
+}
+
+void Task1Window::Render() {
   auto io = ImGui::GetIO();
 
   switch (curr_action_) {
   case kInputTheCount:
     if (action_win_open_) {
-      int add_size = 2;
       ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
       ImGui::SetNextWindowSize(ImVec2(45, 20), ImGuiCond_FirstUseEver);
 
       ImGui::Begin("Enter the count", &action_win_open_);
-      ImGui::InputInt("", &add_size);
+      ImGui::InputInt("", &add_size_);
       if (ImGui::Button("Continue")) {
-        if (add_size == 0) {
+        if (add_size_ == 0) {
           curr_action_ = kNoAction;
         } else {
           FactoryPart *new_arr = static_cast<FactoryPart *>(
-              realloc(array_, sizeof(FactoryPart) * (array_size_ + add_size)));
+              realloc(array_, sizeof(FactoryPart) * (array_size_ + add_size_)));
           if (new_arr == nullptr) {
             ImGui::Text("Unable to reallocate memory ");
           } else {
-            memset(new_arr + array_size_, 0, sizeof(FactoryPart) * add_size);
+            memset(new_arr + array_size_, 0, sizeof(FactoryPart) * add_size_);
             old_size_ = array_size_;
-            array_size_ += add_size;
+            array_size_ += add_size_;
             array_ = new_arr;
             curr_action_ = kInputItemsCount;
             curr_item_ = old_size_;
+            meta_input_.Reset();
           }
         }
       }
@@ -325,16 +296,7 @@ void Task1MainWindow::Render() {
     }
     break;
   case kInputItemsCount:
-    if (action_win_open_) {
-      meta_input_.Render();
-    } else { // Input is cancelled by the user. Send nothing and free unused
-             // memory
-      array_size_ = old_size_;
-      filled_in_ = old_size_;
-      array_ = static_cast<FactoryPart *>(
-          realloc(array_, array_size_ * sizeof(FactoryPart)));
-      curr_action_ = kNoAction;
-    }
+    meta_input_.Render();
     break;
   case kInputUntil:
     break;
@@ -349,11 +311,7 @@ void Task1MainWindow::Render() {
     //   }
     // }
   case kViewWhole:
-    if (action_win_open_) {
-      //   ViewPart(array[curr_item], curr_item, filled_in, action_win_open);
-    } else {
-      curr_action_ = kNoAction;
-    }
+    meta_viewer_.Render();
     break;
   case kViewSearch:
     break;
@@ -392,5 +350,50 @@ void Task1MainWindow::Render() {
     action_win_open_ = false;
     DrawMenuWindow();
     break;
+  case kWait:
+    ImGui::SetNextWindowPos(ImVec2(30, 10), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(36, 4), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Wait for a while...");
+    ImGui::Text("Your request is being processed...");
+    ImGui::End();
+    break;
   }
+}
+
+Task1Window::Task1Window(Qlastic *qls, QObject *parent)
+    : Window(parent), part_wrapper_(&buf_), qls_(qls) {
+  meta_input_.SetTarget(&part_wrapper_);
+  QObject::connect(&meta_input_, &MetaInput::Submit, this,
+                   &Task1Window::PartInputSubmitted);
+  QObject::connect(&meta_input_, &MetaInput::Cancel, this,
+                   &Task1Window::PartInputCancelled);
+  QObject::connect(&create_, &QlBulkCreateDocuments::Success, this,
+                   &Task1Window::PartsCreated);
+  QObject::connect(&create_, &QlBulkCreateDocuments::Failure, this,
+                   &Task1Window::PartsCreationFailed);
+  QObject::connect(&meta_viewer_, &MetaViewer::Next, this,
+                   &Task1Window::ChangeWrapped);
+  QObject::connect(&meta_viewer_, &MetaViewer::Previous, this,
+                   &Task1Window::ChangeWrapped);
+  QObject::connect(&meta_viewer_, &MetaViewer::Closed, this,
+                   &Task1Window::ViewerClosed);
+}
+
+void Task1Window::PartsCreated(QVector<QString> s) {
+  text_ += std::format("{} parts added\n", s.size());
+  for (int i = old_size_; i < array_size_; ++i) {
+    array_[i]._id = new QString(s[i - old_size_]);
+  }
+  curr_action_ = kNoAction;
+}
+
+void Task1Window::PartsCreationFailed() {
+  text_ += "Failed to add parts\n";
+  PartInputCancelled();
+}
+
+void Task1Window::ViewerClosed() { curr_action_ = kNoAction; }
+
+void Task1Window::ChangeWrapped(int index) {
+  part_wrapper_.SetTarget(array_ + index);
 }

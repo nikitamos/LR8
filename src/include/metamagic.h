@@ -11,9 +11,6 @@
 #include <random>
 #include <string>
 
-#include "metaenum.h"
-#include "window.h"
-
 inline QMetaEnum MetaTypeToMetaEnum(const QMetaType &t) {
   assert(t.flags() & QMetaType::IsEnumeration);
   // Returns the metaobject enclosing the enum (read the docs~)
@@ -23,6 +20,14 @@ inline QMetaEnum MetaTypeToMetaEnum(const QMetaType &t) {
   int index = enclosing->indexOfEnumerator(sv.begin());
   assert(index >= 0);
   return enclosing->enumerator(index);
+}
+
+static std::string StringifySnakeCase(const char *text) {
+  QString text2 = text;
+  text2.replace("_", " ");
+  std::string res = text2.toStdString();
+  res[0] = toupper(res[0]);
+  return res;
 }
 
 struct Input {
@@ -39,7 +44,7 @@ struct Input {
 };
 
 template <typename T> struct BufInput : public Input {
-  T buf;
+  T buf{};
   explicit BufInput(QString name) : Input(name) {}
   virtual QVariant Get() override { return buf; }
 };
@@ -101,21 +106,48 @@ public:
 public slots:
   void Populate();
   void Render();
+  void Reset();
 signals:
   /// The signal is emitted when the Submit button is pressed after the target
   /// object is populated
   void Submit(QObject *target);
+  void Cancel();
 
 private:
   QObject *t_;
   QList<Input *> item_;
   const char *win_name_;
   bool open_ = true;
+  bool cancel_ = false;
 };
-/*
-class MetaViewer : Window {
+
+class MetaViewer : public QObject {
   Q_OBJECT
 public:
+  explicit MetaViewer(QObject *provider = nullptr, int size = 0)
+      : provider_(provider), size_(size) {}
+  void SetProvider(QObject *prov) { provider_ = prov; }
+  int GetCurrent() const { return curr_; }
+  void SetCurrent(int newval) { curr_ = newval; }
+  void SetCollectionSize(int newsize) { size_ = newsize; }
+  int GetCollectionSize() const { return size_; }
+  bool IsOpen() const { return open_; }
+  void Render();
+  void Close() {
+    open_ = false;
+    emit Closed();
+  }
 signals:
+  /// Emitted when Next button is pressed. Argument is the new index
+  void Next(int n);
+  /// Emitted wher Prev button is pressed. Argument is the new number
+  void Previous(int n);
+  void Custom(int n);
+  void Closed();
+
+private:
+  int curr_ = 0;
+  int size_ = 1;
+  bool open_ = true;
+  QObject *provider_;
 };
-*/
