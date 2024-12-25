@@ -20,6 +20,7 @@ enum Action {
   kModifyRemove,
   kModifyRemoveAll,
   kWait,
+  kInputProperty,
   kNoAction
 };
 
@@ -42,11 +43,20 @@ public slots:
   void SearchSucceed(QJsonObject res);
   void SearchFailed();
 
+  void IndexDeleted();
+  void IndexDeleteFailed();
+
+  void IndexCreated();
+  void IndexCreateFailed();
+
 private:
   void FreeArray();
   Qlastic *qls_;
   QlBulkCreateDocuments create_{"task1_factory"};
   QlSearch search_{"task1_factory", QJsonDocument()};
+  QlDeleteIndex index_delete_{"task1_factory"};
+  QlCreateIndex index_create_{"task1_factory"};
+  FieldValueSelector field_selector_;
 
   std::string text_{"Was mich nicht umbringt, macht mich staerker.\n"};
   void DrawMenuWindow();

@@ -17,119 +17,6 @@ class CustomViewAction;
 void ViewPart(FactoryPart &p, int &index, int count, bool &open,
               CustomViewAction *act = nullptr);
 
-/*
-class SearchInput {
-public:
-  SearchInput() { memset(&part_, 0, sizeof(part_)); }
-  void Render(bool &open) {
-    if (IsSubmitted()) {
-      if (res_.count == 0) {
-        ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(20, 10), ImGuiCond_FirstUseEver);
-        ImGui::Begin("SearchResults", &open);
-        ImGui::Text("Nothing found :(");
-        ImGui::End();
-      } else {
-        ViewPart(res_.res[index_], index_, res_.count, open);
-        if (!open) {
-          submit_ = false;
-        }
-      }
-      return;
-    }
-    ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(20, 10), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Win", &open);
-    ImGui::Combo("##FieldCombo", &field_,
-                 "Name\0Department\0Weight\0Material\0Volume\0Count\0");
-    ImGui::NewLine();
-    switch (field_) {
-    case 0:
-      preview_ = "Name";
-      ImGui::InputText("##LIAUSTF", part_.name, sizeof(part_.name));
-      break;
-    case 1:
-      preview_ = "Department";
-      ImGui::InputInt("##er;orty", &part_.department_no);
-      break;
-    case 2:
-      preview_ = "Weight";
-      ImGui::InputFloat("##:LKUAry934y", &part_.weight);
-      break;
-    case 3:
-      preview_ = "Material";
-      ImGui::Combo("##MaterialCombo", &material_tag_, "Steel\0Brass\0");
-      if (material_tag_ == 0) {
-        ImGui::Text("Mark");
-        ImGui::SameLine();
-        ImGui::InputInt("##as;eor", &part_.material.steel);
-      } else {
-        ImGui::Text("Copper percentage");
-        ImGui::SameLine();
-        ImGui::InputFloat("##w[0sfdugh]", &part_.material.brass);
-      }
-      break;
-    case 4:
-      preview_ = "Volume";
-      ImGui::InputFloat("##sldfih", &part_.volume);
-      break;
-    case 5:
-      preview_ = "Count";
-      ImGui::InputInt("##eqeitj", &part_.count);
-      break;
-    default:
-      break;
-    }
-    ImGui::NewLine();
-    if (ImGui::Button("Submit")) {
-      submit_ = true;
-      open = false;
-    }
-    ImGui::End();
-  }
-
-  void Send(Elasticsearch *client) {
-    // res_ = els::search_for_part(client, &part_, field_);
-  }
-  bool IsMatch(FactoryPart &part) const {
-    switch (field_) {
-    case 0:
-      return std::strcmp(part.name, part_.name) != 0;
-    case 1:
-      return part.department_no == part_.department_no;
-    case 2:
-      return part.weight == part_.weight;
-    case 3:
-      if (part_.material.tag == part.mt) {
-        if (part.material.tag == els::Material_Tag::Steel) {
-          return part_.material.steel == part.material.steel;
-        }
-        return part_.material.brass == part.material.brass;
-      }
-      return false;
-    case 4:
-      return part.volume == part_.volume;
-    case 5:
-      return part.count == part_.count;
-    default:
-      std::cerr << "WARNING: ...\n";
-      return false;
-    }
-  }
-  bool Unsubmit() { submit_ = false; }
-  bool IsSubmitted() const { return submit_; }
-  void Deallocate() { els::free_all_parts(&res_.res, &res_.count); }
-
-private:
-//   els::FactoryPart part_;
-  int material_tag_ = 0;
-  int field_ = 0;
-  int index_ = 0;
-  bool submit_ = false;
-  const char *preview_ = "Select the field for search";
-//   els::PartSearchResult res_{nullptr, 0};
-};*/
-
 class CustomViewAction {
 public:
   explicit CustomViewAction(const char *button_text) : text_(button_text) {}
@@ -339,9 +226,10 @@ void Task1Window::Render() {
     //   }
     // }
   case kModifyItem:
+    // field_selector_.Render();
     break;
   case kModifyRemove:
-
+    field_selector_.Render();
     // if (action_win_open) {
     //   ViewPart(array[curr_item], curr_item, filled_in, action_win_open,
     //            &action_remove);
@@ -350,13 +238,7 @@ void Task1Window::Render() {
     // }
     break;
   case kModifyRemoveAll:
-    filled_in_ = 0;
-    curr_item_ = 0;
-    if (false /*delete_all_from_index(client, &array, &array_size) != 1*/) {
-      exit(1);
-    } else {
-      curr_action_ = kNoAction;
-    }
+    qls_->Send(&index_delete_);
     break;
   case kNoAction:
     action_win_open_ = false;
@@ -369,11 +251,15 @@ void Task1Window::Render() {
     ImGui::Text("Your request is being processed...");
     ImGui::End();
     break;
+  case kInputProperty:
+    field_selector_.Render();
+    break;
   }
 }
 
 Task1Window::Task1Window(Qlastic *qls, QObject *parent)
-    : Window(parent), part_wrapper_(&buf_), qls_(qls) {
+    : Window(parent), part_wrapper_(&buf_), qls_(qls),
+      field_selector_(MetaFactoryPart::staticMetaObject.metaType()) {
   meta_input_.SetTarget(&part_wrapper_);
   QObject::connect(&meta_input_, &MetaInput::Submit, this,
                    &Task1Window::PartInputSubmitted);
@@ -393,6 +279,15 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::SearchSucceed);
   QObject::connect(&search_, &QlSearch::Failure, this,
                    &Task1Window::SearchFailed);
+
+  QObject::connect(&index_delete_, &QlDeleteIndex::Success, this,
+                   &Task1Window::IndexDeleted);
+  QObject::connect(&index_delete_, &QlDeleteIndex::Failure, this,
+                   &Task1Window::IndexDeleteFailed);
+  QObject::connect(&index_create_, &QlCreateIndex::Success, this,
+                   &Task1Window::IndexCreated);
+  QObject::connect(&index_create_, &QlCreateIndex::Failure, this,
+                   &Task1Window::IndexCreateFailed);
   qls_->Send(&search_);
   curr_action_ = kWait;
 }
@@ -433,19 +328,8 @@ void Task1Window::SearchSucceed(QJsonObject res) {
 
   QJsonArray vals = res["hits"].toObject()["hits"].toArray();
   for (int i = 0; i < vals.count(); ++i) {
-    // Why?
-    QJsonValue val = vals.at(i);
-    QJsonObject src = val["_source"].toObject();
-    QString tmpstr = val["_id"].toString();
-    array_[i]._id = new QString(tmpstr);
-    array_[i].count = src["count"].toInt();
-    array_[i].department_no = src["department_no"].toInt();
-    array_[i].mt = (MaterialTag)src["material"].toInt();
-    array_[i].weight = src["weight"].toDouble();
-    array_[i].volume = src["volume"].toDouble();
-    std::string s = src["name"].toString().toStdString();
-    memset(array_[i].name, 0, sizeof(array_[i].name));
-    strcpy(array_[i].name, s.c_str());
+    auto val = vals.at(i).toObject();
+    DeserializePart(array_ + i, val);
   }
 }
 void Task1Window::SearchFailed() {
@@ -464,4 +348,22 @@ void Task1Window::FreeArray() {
   filled_in_ = 0;
   array_size_ = 0;
   free(array_);
+}
+
+void Task1Window::IndexDeleted() {
+  FreeArray();
+  text_ += "Index deleted\n";
+  qls_->Send(&index_create_);
+}
+void Task1Window::IndexDeleteFailed() {
+  text_ += "Failed to delete index\n";
+  curr_action_ = kNoAction;
+}
+void Task1Window::IndexCreated() {
+  text_ += "Index created\n";
+  curr_action_ = kNoAction;
+}
+void Task1Window::IndexCreateFailed() {
+  text_ += "Failed to create index\n";
+  curr_action_ = kNoAction;
 }

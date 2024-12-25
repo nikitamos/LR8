@@ -34,6 +34,8 @@ int main(int argc, char **argv) {
   getchar();
 
   Qlastic qls(QUrl("http://localhost:9200/"));
+  QlCreateIndex ci{kTask1Index};
+  qls.Send(&ci);
 
   IMGUI_CHECKVERSION();
   auto *ctx = ImGui::CreateContext();
@@ -45,7 +47,6 @@ int main(int argc, char **argv) {
 
   QTimer timer;
   QObject::connect(&timer, &QTimer::timeout, [&mw, screen]() {
-    // std::cerr << "Call!\n";
     ImTui_ImplNcurses_NewFrame();
     ImTui_ImplText_NewFrame();
     ImGui::NewFrame();

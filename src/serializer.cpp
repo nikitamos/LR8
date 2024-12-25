@@ -6,6 +6,7 @@
 #include <qvariant.h>
 
 #include "serializer.h"
+#include "task1part.h"
 
 QJsonObject Serialize(QObject *obj) {
   QJsonObject res;
@@ -36,4 +37,16 @@ void Deserialize(QObject *target, const QJsonObject &obj) {
       }
     }
   }
+}
+
+void DeserializePart(FactoryPart *p, const QJsonObject &val) {
+  QJsonObject src = val["_source"].toObject();
+  QString tmpstr = val["_id"].toString();
+  p->_id = new QString(tmpstr);
+  p->count = src["count"].toInt();
+  p->department_no = src["department_no"].toInt();
+  p->mt = (MaterialTag)src["material"].toInt();
+  p->weight = src["weight"].toDouble();
+  p->volume = src["volume"].toDouble();
+  new (&p->name) QString(src["name"].toString());
 }

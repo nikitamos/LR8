@@ -23,7 +23,7 @@ Input *Input::FromType(QMetaType meta, QString property_name) {
     res = new IntInput(property_name);
     break;
   case QMetaType::QString:
-    res = new TextInput(property_name);
+    res = new StdStringInput(property_name);
     break;
   default:
     if ((meta.flags() & QMetaType::IsEnumeration) != 0) {

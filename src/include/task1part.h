@@ -16,14 +16,10 @@
 enum MaterialTag MATERIAL_TAG_DECL;
 
 typedef struct FactoryPart {
-  char name[80];
+  QString name;
   int32_t count;
   int32_t department_no;
   MaterialTag mt;
-  union {
-    int32_t steel;
-    float brass;
-  } material;
   float weight;
   float volume;
   QString *_id{nullptr};
@@ -37,20 +33,19 @@ public:
   void SetTarget(FactoryPart *target) { inner_ = target; }
   enum Material MATERIAL_TAG_DECL;
   Q_ENUM(Material)
-  Q_PROPERTY(QString name READ Getname WRITE Setname)
-  QString Getname() const { return name_; }
-  void Setname(QString nv) { name_ = nv; }
 
-  Q_PROPERTY(Material material READ Getmaterial WRITE Setmaterial)
   Material Getmaterial() const { return (Material)inner_->mt; }
   void Setmaterial(Material m) { inner_->mt = (MaterialTag)m; }
 
+  PROP(QString, name)
+  Q_PROPERTY(Material material READ Getmaterial WRITE Setmaterial)
   PROP(qint32, count)
   PROP(qint32, department_no)
   PROP(qint32, weight)
   PROP(float, volume)
-  //   PROP(Material, material)
 private:
   QString name_;
   FactoryPart *inner_;
 };
+
+void DeserializePart(FactoryPart *p, const QJsonObject &obj);
