@@ -3,7 +3,6 @@
 #include "qjsonarray.h"
 #include "serializer.h"
 #include <QNetworkAccessManager>
-#include <functional>
 #include <iostream>
 #include <qjsondocument.h>
 #include <qjsonobject.h>
@@ -11,6 +10,8 @@
 #include <qnetworkaccessmanager.h>
 #include <qnetworkreply.h>
 #include <qnetworkrequest.h>
+#include <qobject.h>
+#include <qtmetamacros.h>
 #include <qurl.h>
 
 class QlasticOperation : public QObject {
@@ -79,13 +80,21 @@ private:
 class QlSearch : public QlasticOperation {
   Q_OBJECT
 public:
-  explicit QlSearch(QString index, QJsonDocument *body)
-      : index_(index), body_(body->toJson()) {}
+  explicit QlSearch(QString index, QJsonDocument body)
+      : index_(index), body_(body.toJson()) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override {
-    std::cerr << "Error: " << repl_->error() << '\n';
-    qDebug() << "Search finished" << repl_->readAll();
+    if (repl_->error() != 0) {
+      emit Failure();
+    } else {
+      auto res = QJsonDocument::fromJson(repl_->readAll());
+      emit Success(res.object());
+    }
+    repl_->deleteLater();
   }
+signals:
+  void Failure();
+  void Success(QJsonObject res);
 
 private:
   QString params_;

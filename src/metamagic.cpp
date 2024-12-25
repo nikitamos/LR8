@@ -1,4 +1,5 @@
 #include "metamagic.h"
+#include "imgui/imgui.h"
 #include <qlogging.h>
 #include <qmetaobject.h>
 #include <qobject.h>
@@ -115,6 +116,10 @@ void MetaInput::Reset() {
 QObject *MetaInput::GetTarget() { return t_; }
 
 void MetaViewer::Render() {
+  std::string s = std::format("{} of {}", curr_ + 1, size_);
+  ImGui::Text("%s", s.c_str());
+  ImGui::NewLine();
+
   const auto *meta = provider_->metaObject();
   for (int i = 1; i < meta->propertyCount(); ++i) {
     auto prop = meta->property(i);
@@ -122,7 +127,6 @@ void MetaViewer::Render() {
       std::string item = StringifySnakeCase(prop.name()) + ": ";
       item += prop.read(provider_).toString().toStdString();
       ImGui::Text("%s", item.c_str());
-      ImGui::NewLine();
     }
   }
   if (curr_ > 0) {

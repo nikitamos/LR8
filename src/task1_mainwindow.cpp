@@ -2,8 +2,15 @@
 #include "backend_api.h"
 #include "metamagic.h"
 #include "qlastic.h"
+#include "serializer.h"
+#include "task1part.h"
+#include <cstdlib>
 #include <format>
 #include <imgui/imgui.h>
+#include <qcoreapplication.h>
+#include <qjsonarray.h>
+#include <qjsondocument.h>
+#include <qjsonobject.h>
 #include <qobject.h>
 
 class CustomViewAction;
@@ -162,6 +169,9 @@ private:
 /// Сортирует массив по убыванию количества
 /// (за что этот алгоритм?)
 void ShakerSort(FactoryPart *a, int count) {
+  if (count <= 1) {
+    return;
+  }
   int left = 0;
   int right = count - 1;
   while (left != right) {
@@ -207,6 +217,8 @@ void Task1Window::DrawMenuWindow() {
       if (ImGui::MenuItem("Whole array") && filled_in_ != 0) {
         meta_viewer_.SetCollectionSize(filled_in_);
         meta_viewer_.SetProvider(&part_wrapper_);
+        part_wrapper_.SetTarget(array_);
+        meta_viewer_.SetCurrent(0);
         curr_item_ = 0;
         curr_action_ = kViewWhole;
         action_win_open_ = true;
@@ -216,7 +228,7 @@ void Task1Window::DrawMenuWindow() {
         action_win_open_ = true;
       }
       if (ImGui::MenuItem("Sort")) {
-        // ShakerSort(array, filled_in);
+        ShakerSort(array_, filled_in_);
         curr_action_ = kViewWhole;
         action_win_open_ = true;
       }
@@ -377,6 +389,12 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::ChangeWrapped);
   QObject::connect(&meta_viewer_, &MetaViewer::Closed, this,
                    &Task1Window::ViewerClosed);
+  QObject::connect(&search_, &QlSearch::Success, this,
+                   &Task1Window::SearchSucceed);
+  QObject::connect(&search_, &QlSearch::Failure, this,
+                   &Task1Window::SearchFailed);
+  qls_->Send(&search_);
+  curr_action_ = kWait;
 }
 
 void Task1Window::PartsCreated(QVector<QString> s) {
@@ -396,4 +414,54 @@ void Task1Window::ViewerClosed() { curr_action_ = kNoAction; }
 
 void Task1Window::ChangeWrapped(int index) {
   part_wrapper_.SetTarget(array_ + index);
+}
+
+void Task1Window::SearchSucceed(QJsonObject res) {
+  curr_action_ = kNoAction;
+  text_ += "Search succeed\n";
+  FreeArray();
+  array_size_ = res["hits"].toObject()["total"].toObject()["value"].toInt();
+  filled_in_ = array_size_;
+  if (array_size_ == 0) {
+    text_ += "Nothing found\n";
+    return;
+  }
+  array_ = (FactoryPart *)malloc(sizeof(FactoryPart) * array_size_);
+  if (array_ == nullptr) {
+    QCoreApplication::exit(1);
+  }
+
+  QJsonArray vals = res["hits"].toObject()["hits"].toArray();
+  for (int i = 0; i < vals.count(); ++i) {
+    // Why?
+    QJsonValue val = vals.at(i);
+    QJsonObject src = val["_source"].toObject();
+    QString tmpstr = val["_id"].toString();
+    array_[i]._id = new QString(tmpstr);
+    array_[i].count = src["count"].toInt();
+    array_[i].department_no = src["department_no"].toInt();
+    array_[i].mt = (MaterialTag)src["material"].toInt();
+    array_[i].weight = src["weight"].toDouble();
+    array_[i].volume = src["volume"].toDouble();
+    std::string s = src["name"].toString().toStdString();
+    memset(array_[i].name, 0, sizeof(array_[i].name));
+    strcpy(array_[i].name, s.c_str());
+  }
+}
+void Task1Window::SearchFailed() {
+  curr_action_ = kNoAction;
+  text_ += "Search failed!\n";
+}
+
+void Task1Window::FreeArray() {
+  if (array_ == nullptr) {
+    return;
+  }
+  for (int i = 0; i < filled_in_; ++i) {
+    delete array_[i]._id;
+    array_[i]._id = nullptr;
+  }
+  filled_in_ = 0;
+  array_size_ = 0;
+  free(array_);
 }

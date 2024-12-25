@@ -1,5 +1,7 @@
 #pragma once
 
+#include <qjsondocument.h>
+#include <qjsonobject.h>
 #include <qobject.h>
 #include <qtmetamacros.h>
 
@@ -25,7 +27,7 @@ class Task1Window : public Window {
   Q_OBJECT
 public:
   explicit Task1Window(Qlastic *qls, QObject *parent = nullptr);
-  virtual ~Task1Window() {}
+  virtual ~Task1Window() { FreeArray(); }
   virtual void Render();
 public slots:
   void PartInputSubmitted(QObject *part);
@@ -37,10 +39,16 @@ public slots:
   void ChangeWrapped(int index);
   void ViewerClosed();
 
+  void SearchSucceed(QJsonObject res);
+  void SearchFailed();
+
 private:
+  void FreeArray();
   Qlastic *qls_;
-  std::string text_;
   QlBulkCreateDocuments create_{"task1_factory"};
+  QlSearch search_{"task1_factory", QJsonDocument()};
+
+  std::string text_{"Was mich nicht umbringt, macht mich staerker.\n"};
   void DrawMenuWindow();
   FactoryPart buf_;
   Action curr_action_ = kNoAction;
