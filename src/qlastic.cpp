@@ -106,8 +106,6 @@ void QlBulkDeleteDocuments::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
 }
 
 void QlBulkDeleteDocuments::RequestFinished() {
-  std::cerr << QJsonDocument::fromJson(repl_->readAll()).toJson().toStdString()
-            << '\n';
   if (repl_->error() != 0) {
     emit Failure();
   } else {

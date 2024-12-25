@@ -135,6 +135,7 @@ void MetaViewer::Render() {
       --curr_;
       emit Previous(curr_);
     }
+    ImGui::SameLine();
   }
   if (curr_ < size_ - 1) {
     if (ImGui::Button("Next")) {
@@ -145,6 +146,10 @@ void MetaViewer::Render() {
     if (ImGui::Button("Finish")) {
       Close();
     }
+  }
+  ImGui::NewLine();
+  if (ImGui::Button("Delete")) {
+    emit Delete(curr_);
   }
 }
 

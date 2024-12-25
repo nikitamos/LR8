@@ -111,6 +111,11 @@ void Task1Window::DrawMenuWindow() {
       }
       if (ImGui::MenuItem("Sort")) {
         ShakerSort(array_, filled_in_);
+        meta_viewer_.SetCollectionSize(filled_in_);
+        meta_viewer_.SetProvider(&part_wrapper_);
+        part_wrapper_.SetTarget(array_);
+        meta_viewer_.SetCurrent(0);
+        curr_item_ = 0;
         curr_action_ = kViewWhole;
         action_win_open_ = true;
       }
@@ -201,30 +206,10 @@ void Task1Window::Render() {
   case kViewWhole:
     meta_viewer_.Render();
     break;
-  case kViewSearch:
-    break;
-    // if (action_win_open) {
-    //   int index = 0;
-    //   search_input.Render(action_win_open);
-    // } else {
-    //   if (search_input.IsSubmitted()) {
-    //     search_input.Send(client);
-    //     action_win_open = true;
-    //   } else {
-    //     curr_action = kNoAction;
-    //   }
-    // }
   case kModifyItem:
-    // field_selector_.Render();
     break;
   case kDeleteDocs:
     property_selector_.Render();
-    // if (action_win_open) {
-    //   ViewPart(array[curr_item], curr_item, filled_in, action_win_open,
-    //            &action_remove);
-    // } else {
-    //   curr_action = kNoAction;
-    // }
     break;
   case kModifyRemoveAll:
     qls_->Send(&index_delete_);
@@ -264,6 +249,9 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::ChangeWrapped);
   QObject::connect(&meta_viewer_, &MetaViewer::Closed, this,
                    &Task1Window::CancelAction);
+  QObject::connect(&meta_viewer_, &MetaViewer::Delete, this,
+                   &Task1Window::DeleteSingleItem);
+
   QObject::connect(&search_, &QlSearch::Success, this,
                    &Task1Window::SearchSucceed);
   QObject::connect(&search_, &QlSearch::Failure, this,
@@ -396,10 +384,31 @@ void Task1Window::SendSearchDelete(QJsonObject obj) {
 }
 
 void Task1Window::DeleteSucceed() {
-  curr_action_ = kNoAction;
+  curr_action_ = next_action_;
+  next_action_ = kNoAction;
+  meta_viewer_.SetCollectionSize(filled_in_);
   text_ += "Deletion succeed. You can select the other documents\n";
 }
 void Task1Window::DeleteFailed() {
   curr_action_ = kNoAction;
   text_ += "Deletion failed.\n";
+}
+void Task1Window::DeleteSingleItem(int n) {
+  next_action_ = curr_action_;
+  curr_action_ = kWait;
+  delete_.ClearBody();
+  delete_.AddDocument(*array_[n]._id);
+  delete array_->_id;
+  for (int i = n + 1; i < filled_in_; ++i) {
+    array_[i - 1] = array_[i];
+  }
+  array_ =
+      (FactoryPart *)realloc(array_, sizeof(FactoryPart) * (--array_size_));
+  --filled_in_;
+  if (n == filled_in_) {
+    meta_viewer_.SetCollectionSize(filled_in_ - 1);
+    meta_viewer_.SetCurrent(n - 1);
+    part_wrapper_.SetTarget(array_ + n - 1);
+  }
+  qls_->Send(&delete_);
 }

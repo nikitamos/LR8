@@ -155,7 +155,8 @@ signals:
   void Next(int n);
   /// Emitted wher Prev button is pressed. Argument is the new number
   void Previous(int n);
-  void Custom(int n);
+  void Delete(int n);
+  void Modify(int n);
   void Closed();
 
 private:

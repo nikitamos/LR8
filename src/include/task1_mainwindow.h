@@ -15,7 +15,6 @@ enum Action {
   kInputItemsCount,
   kInputUntil,
   kViewWhole,
-  kViewSearch,
   kModifyItem,
   kDeleteDocs,
   kModifyRemoveAll,
@@ -52,6 +51,7 @@ public slots:
   void SendSearch(QJsonObject obj);
   void SendSearchDelete(QJsonObject obj);
 
+  void DeleteSingleItem(int n);
   void DeleteSucceed();
   void DeleteFailed();
 
@@ -65,7 +65,7 @@ private:
   QlCreateIndex index_create_{"task1_factory"};
   FieldValueSelector property_selector_;
 
-  std::string text_{"Was mich nicht umbringt, macht mich staerker.\n"};
+  std::string text_{"\"Was mich nicht umbringt, macht mich staerker.\"\n"};
   void DrawMenuWindow();
   FactoryPart buf_;
   Action curr_action_ = kNoAction;
