@@ -1,5 +1,6 @@
 #include "metamagic.h"
 #include "imgui/imgui.h"
+#include <qjsonarray.h>
 #include <qjsonobject.h>
 #include <qlogging.h>
 #include <qmetaobject.h>
@@ -82,6 +83,9 @@ void MetaInput::SetTarget(QObject *new_target) {
   item_.clear();
 
   for (int i = 1; i < meta->propertyCount(); ++i) {
+    if (!meta->property(i).isWritable()) {
+      continue;
+    }
     const char *name = meta->property(i).name();
     auto property = new_target->property(name);
     Input *r = Input::FromType(property.metaType(), name);

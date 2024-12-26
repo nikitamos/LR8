@@ -84,6 +84,7 @@ public:
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override {
     auto x = repl_->readAll();
+    std::cerr << QJsonDocument::fromJson(x).toJson().toStdString();
     if (repl_->error() != 0) {
       std::cerr << x.toStdString();
       emit Failure();

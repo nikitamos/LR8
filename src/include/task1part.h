@@ -11,18 +11,21 @@
   type Get##x() const { return inner_->x; }                                    \
   void Set##x(type nval) { inner_->x = nval; }
 
-#define MATERIAL_TAG_DECL {kSteel = 0, kBrass = 1, kNichrome = 2, kTitan = 3}
+#define MATERIAL_TAG_DECL {kSteel = 0, kBrass = 1, kNichrome = 2, kTitanium = 3}
 
-enum MaterialTag MATERIAL_TAG_DECL;
+enum class MaterialTag MATERIAL_TAG_DECL;
 
 typedef struct FactoryPart {
   QString name;
   int32_t count;
   int32_t department_no;
-  MaterialTag mt;
+  union {
+    MaterialTag mt;
+    int mt_int;
+  };
   float weight;
   float volume;
-  QString *_id{nullptr};
+  QString *doc_id{nullptr};
 } FactoryPart;
 
 class MetaFactoryPart : public QObject {
@@ -34,15 +37,17 @@ public:
   enum Material MATERIAL_TAG_DECL;
   Q_ENUM(Material)
 
-  Material Getmaterial() const { return (Material)inner_->mt; }
-  void Setmaterial(Material m) { inner_->mt = (MaterialTag)m; }
+  Material Getmaterial() const { return static_cast<Material>(inner_->mt_int); }
+  void Setmaterial(Material m) { inner_->mt_int = m; }
 
   PROP(QString, name)
   Q_PROPERTY(Material material READ Getmaterial WRITE Setmaterial)
   PROP(qint32, count)
   PROP(qint32, department_no)
-  PROP(qint32, weight)
-  PROP(float, volume)
+  PROP(float, weight)
+  Q_PROPERTY(float volume READ Getvolume)
+  float Getvolume() { return inner_->volume; }
+
 private:
   QString name_;
   FactoryPart *inner_;

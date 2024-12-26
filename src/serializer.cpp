@@ -10,8 +10,12 @@
 
 QJsonObject Serialize(QObject *obj) {
   QJsonObject res;
-  for (int i = 1; i < obj->metaObject()->propertyCount(); ++i) {
-    QString name = obj->metaObject()->property(i).name();
+  const auto *meta = obj->metaObject();
+  for (int i = 1; i < meta->propertyCount(); ++i) {
+    if (!meta->property(i).isWritable()) {
+      continue;
+    }
+    QString name = meta->property(i).name();
     auto p = obj->property(name.toStdString().c_str());
     if (p.canConvert<QJsonValue>()) {
       p.convert(QMetaType::QJsonValue);
@@ -23,30 +27,14 @@ QJsonObject Serialize(QObject *obj) {
   return res;
 }
 
-void Deserialize(QObject *target, const QJsonObject &obj) {
-  const auto *meta = target->metaObject();
-  for (int i = 0; i < meta->propertyCount(); ++i) {
-    auto property = meta->property(i);
-    QString property_name = property.name();
-    if (obj.contains(property_name)) {
-      QVariant val = obj[property_name].toVariant();
-      if (val.metaType() == property.metaType()) {
-        target->setProperty(property_name.toUtf8(), val);
-      } else {
-        qDebug() << "Can not convert some shit!" << property.metaType().name();
-      }
-    }
-  }
-}
-
-void DeserializePart(FactoryPart *p, const QJsonObject &val) {
-  QJsonObject src = val["_source"].toObject();
-  QString tmpstr = val["_id"].toString();
-  p->_id = new QString(tmpstr);
+void DeserializePart(FactoryPart *p, const QJsonObject &obj) {
+  QJsonObject src = obj["_source"].toObject();
+  QString tmpstr = obj["_id"].toString();
+  p->doc_id = new QString(tmpstr);
   p->count = src["count"].toInt();
   p->department_no = src["department_no"].toInt();
-  p->mt = (MaterialTag)src["material"].toInt();
-  p->weight = src["weight"].toDouble();
-  p->volume = src["volume"].toDouble();
+  p->mt_int = src["material"].toInt();
+  p->weight = static_cast<float>(src["weight"].toDouble());
+  p->volume = static_cast<float>(obj["fields"]["volume"][0].toDouble());
   new (&p->name) QString(src["name"].toString());
 }

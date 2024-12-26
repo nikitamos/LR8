@@ -51,9 +51,7 @@ template <typename T> struct BufInput : public Input {
   T buf{};
   explicit BufInput(QString name) : Input(name) {}
   virtual QVariant Get() override { return buf; }
-  virtual void Set(QVariant val) override {
-    buf = val.convert(QMetaType::fromType<T>());
-  }
+  virtual void Set(QVariant val) override { buf = qvariant_cast<T>(val); }
 };
 
 struct StdStringInput : public Input {

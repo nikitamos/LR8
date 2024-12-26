@@ -250,6 +250,7 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::DeleteSucceed);
   QObject::connect(&delete_, &QlBulkDeleteDocuments::Failure, this,
                    &Task1Window::DeleteFailed);
+  search_.SetBody(R"({"fields": ["volume"]})");
   qls_->Send(&search_);
   curr_action_ = kWait;
 }
@@ -257,7 +258,7 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
 void Task1Window::PartsCreated(QVector<QString> s) {
   text_ += std::format("{} parts added\n", s.size());
   for (int i = old_size_; i < array_size_; ++i) {
-    array_[i]._id = new QString(s[i - old_size_]);
+    array_[i].doc_id = new QString(s[i - old_size_]);
   }
   curr_action_ = kNoAction;
 }
@@ -274,6 +275,8 @@ void Task1Window::ChangeWrapped(int index) {
 }
 
 void Task1Window::SearchSucceed(QJsonObject res) {
+  curr_action_ = next_action_;
+  next_action_ = kNoAction;
   text_ += "Search succeed. ";
   FreeArray();
   array_size_ = res["hits"].toObject()["total"].toObject()["value"].toInt();
@@ -283,7 +286,8 @@ void Task1Window::SearchSucceed(QJsonObject res) {
     return;
   }
   text_ += std::format("{} found\n", filled_in_);
-  array_ = (FactoryPart *)malloc(sizeof(FactoryPart) * array_size_);
+  array_ =
+      static_cast<FactoryPart *>(malloc(sizeof(FactoryPart) * array_size_));
   if (array_ == nullptr) {
     QCoreApplication::exit(1);
   }
@@ -293,12 +297,10 @@ void Task1Window::SearchSucceed(QJsonObject res) {
     auto val = vals.at(i).toObject();
     DeserializePart(array_ + i, val);
   }
-  curr_action_ = next_action_;
-  next_action_ = kNoAction;
   if (curr_action_ == kDeleteDocs) {
     delete_.ClearBody();
     for (int i = 0; i < filled_in_; ++i) {
-      delete_.AddDocument(*array_[i]._id);
+      delete_.AddDocument(*array_[i].doc_id);
     }
     FreeArray();
     curr_action_ = kWait;
@@ -315,8 +317,8 @@ void Task1Window::FreeArray() {
     return;
   }
   for (int i = 0; i < filled_in_; ++i) {
-    delete array_[i]._id;
-    array_[i]._id = nullptr;
+    delete array_[i].doc_id;
+    array_[i].doc_id = nullptr;
   }
   filled_in_ = 0;
   array_size_ = 0;
@@ -345,6 +347,9 @@ void Task1Window::IndexCreateFailed() {
 void Task1Window::SendSearch(QJsonObject obj) {
   curr_action_ = kWait;
   next_action_ = kNoAction;
+  QJsonArray fields{"volume"};
+  obj["fields"] = fields;
+  std::cerr << QJsonDocument(obj).toJson(QJsonDocument::Indented).toStdString();
   search_.SetBody(QJsonDocument(obj).toJson(QJsonDocument::Compact));
   qls_->Send(&search_);
 }
@@ -370,13 +375,13 @@ void Task1Window::DeleteSingleItem(int n) {
   next_action_ = curr_action_;
   curr_action_ = kWait;
   delete_.ClearBody();
-  delete_.AddDocument(*array_[n]._id);
-  delete array_->_id;
+  delete_.AddDocument(*array_[n].doc_id);
+  delete array_->doc_id;
   for (int i = n + 1; i < filled_in_; ++i) {
     array_[i - 1] = array_[i];
   }
-  array_ =
-      (FactoryPart *)realloc(array_, sizeof(FactoryPart) * (--array_size_));
+  array_ = static_cast<FactoryPart *>(
+      realloc(array_, sizeof(FactoryPart) * (--array_size_)));
   --filled_in_;
   if (n == filled_in_) {
     meta_viewer_.SetCollectionSize(filled_in_ - 1);
@@ -387,7 +392,7 @@ void Task1Window::DeleteSingleItem(int n) {
 }
 
 void Task1Window::ModifyItem(int n) {
-  update_.SetId(*array_[n]._id);
+  update_.SetId(*array_[n].doc_id);
   part_wrapper_.SetTarget(array_ + n);
   meta_input_.PopulateFromTarget(&part_wrapper_);
   curr_action_ = kInputItems;
