@@ -156,6 +156,7 @@ public:
     open_ = false;
     emit Closed();
   }
+  void SetOpen(bool v) { open_ = v; }
 signals:
   /// Emitted when Next button is pressed. Argument is the new index
   void Next(int n);

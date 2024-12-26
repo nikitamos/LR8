@@ -69,6 +69,7 @@ void Task1Window::DrawMenuWindow() {
         meta_viewer_.SetProvider(&part_wrapper_);
         part_wrapper_.SetTarget(array_);
         meta_viewer_.SetCurrent(0);
+        meta_viewer_.SetOpen(true);
         curr_item_ = 0;
         curr_action_ = kViewWhole;
         action_win_open_ = true;
@@ -79,6 +80,7 @@ void Task1Window::DrawMenuWindow() {
         meta_viewer_.SetProvider(&part_wrapper_);
         part_wrapper_.SetTarget(array_);
         meta_viewer_.SetCurrent(0);
+        meta_viewer_.SetOpen(true);
         curr_item_ = 0;
         curr_action_ = kViewWhole;
         action_win_open_ = true;
