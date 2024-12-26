@@ -337,7 +337,7 @@ void Task2Window::SendSearchWithSort(QObject *obj) {
         }},
     {
         "sort", QJsonArray{
-            "author", QJsonObject{{"order", "asc"}}
+            QJsonObject{{"author", "asc"}}
         }
     }
   };

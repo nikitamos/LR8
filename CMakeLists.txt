@@ -26,10 +26,32 @@ add_executable(task1
     src/include/task1part.h
     src/include/window.h
 )
-set_target_properties(task1 PROPERTIES
+add_executable(task2
+    src/task2.cpp
+    src/serializer.cpp
+    src/metamagic.cpp
+    src/qlastic.cpp
+    src/metamagic.cpp
+    src/task2_window.cpp
+
+    src/include/metamagic.h
+    src/include/qlastic.h
+    src/include/task2_window.h
+    src/include/task2book.h
+    src/include/window.h
+)
+
+set_target_properties(task1 task2 PROPERTIES
     CXX_STANDARD 20)
 target_include_directories(task1 PRIVATE src/include)
 target_link_libraries(task1 PRIVATE
+    imtui
+    ${CURSES_LIBRARIES}
+    Qt6::Core Qt6::Network
+)
+
+target_include_directories(task2 PRIVATE src/include)
+target_link_libraries(task2 PRIVATE
     imtui
     ${CURSES_LIBRARIES}
     Qt6::Core Qt6::Network
