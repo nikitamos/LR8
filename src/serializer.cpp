@@ -7,6 +7,7 @@
 
 #include "serializer.h"
 #include "task1part.h"
+#include "task2book.h"
 
 QJsonObject Serialize(QObject *obj) {
   QJsonObject res;
@@ -37,4 +38,16 @@ void DeserializePart(FactoryPart *p, const QJsonObject &obj) {
   p->weight = static_cast<float>(src["weight"].toDouble());
   p->volume = static_cast<float>(obj["fields"]["volume"][0].toDouble());
   new (&p->name) QString(src["name"].toString());
+}
+
+void DeserializeBook(LibraryBook *p, const QJsonObject &obj) {
+  QJsonObject src = obj["_source"].toObject();
+  QString tmpstr = obj["_id"].toString();
+  p->doc_id = new QString(tmpstr);
+  new (&p->author) QString(src["author"].toString());
+  new (&p->publishing_house) QString(src["publsihing_house"].toString());
+  new (&p->registry_number) QString(src["registry_number"].toString());
+  new (&p->title) QString(src["title"].toString());
+  p->page_count = src["page_count"].toInt();
+  p->publishing_year = src["publishing_year"].toInt();
 }
