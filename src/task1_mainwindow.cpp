@@ -38,6 +38,11 @@ void ShakerSort(FactoryPart *a, int count) {
   }
 }
 
+static float EvilVolumeCrutch(float weight, int index) {
+  const float kDensityTable[] = {7850.0, 8700.0, 8400.0, 4540.0};
+  return weight / kDensityTable[index];
+}
+
 void Task1Window::DrawMenuWindow() {
   auto io = ImGui::GetIO();
   ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
@@ -93,6 +98,7 @@ void Task1Window::DrawMenuWindow() {
 
 void Task1Window::PartInputSubmitted(QObject *obj) {
   if (next_action_ == kModifyItem) {
+    part_wrapper_.EvilVolumeCrutch();
     curr_action_ = kWait;
     next_action_ = kViewWhole;
     update_.SetObject(obj);

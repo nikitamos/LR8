@@ -128,43 +128,57 @@ void MetaInput::Reset() {
 QObject *MetaInput::GetTarget() { return t_; }
 
 void MetaViewer::Render() {
-  std::string s = std::format("{} of {}", curr_ + 1, size_);
-  ImGui::Text("%s", s.c_str());
-  ImGui::NewLine();
-
-  const auto *meta = provider_->metaObject();
-  for (int i = 1; i < meta->propertyCount(); ++i) {
-    auto prop = meta->property(i);
-    if (prop.isReadable()) {
-      std::string item = StringifySnakeCase(prop.name()) + ": ";
-      item += prop.read(provider_).toString().toStdString();
-      ImGui::Text("%s", item.c_str());
-    }
+  if (!open_) {
+    emit Closed();
+    return;
   }
-  if (curr_ > 0) {
-    if (ImGui::Button("Previous")) {
-      --curr_;
-      emit Previous(curr_);
+  if (ImGui::Begin("Item viewer", &open_)) {
+    std::string s = std::format("{} of {}", curr_ + 1, size_);
+    ImGui::Text("%s", s.c_str());
+    ImGui::NewLine();
+
+    const auto *meta = provider_->metaObject();
+    for (int i = 1; i < meta->propertyCount(); ++i) {
+      auto prop = meta->property(i);
+      if (prop.isReadable()) {
+        std::string item = StringifySnakeCase(prop.name()) + ": ";
+        QVariant val = prop.read(provider_);
+        if (val.typeId() == QMetaType::Float ||
+            val.typeId() == QMetaType::Double) {
+          item += std::format(
+              "{}", round(prop.read(provider_).toDouble() * 1000.0) / 1000.0);
+        } else {
+          item += prop.read(provider_).toString().toStdString();
+        }
+        ImGui::Text("%s", item.c_str());
+      }
+    }
+    if (curr_ > 0) {
+      if (ImGui::Button("Previous")) {
+        --curr_;
+        emit Previous(curr_);
+      }
+      ImGui::SameLine();
+    }
+    if (curr_ < size_ - 1) {
+      if (ImGui::Button("Next")) {
+        ++curr_;
+        emit Next(curr_);
+      }
+    } else {
+      if (ImGui::Button("Finish")) {
+        Close();
+      }
+    }
+    ImGui::NewLine();
+    if (ImGui::Button("Delete")) {
+      emit Delete(curr_);
     }
     ImGui::SameLine();
-  }
-  if (curr_ < size_ - 1) {
-    if (ImGui::Button("Next")) {
-      ++curr_;
-      emit Next(curr_);
+    if (ImGui::Button("Modify")) {
+      emit Modify(curr_);
     }
-  } else {
-    if (ImGui::Button("Finish")) {
-      Close();
-    }
-  }
-  ImGui::NewLine();
-  if (ImGui::Button("Delete")) {
-    emit Delete(curr_);
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Modify")) {
-    emit Modify(curr_);
+    ImGui::End();
   }
 }
 
