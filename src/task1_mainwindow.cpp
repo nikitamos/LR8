@@ -1,15 +1,14 @@
-#include "task1_mainwindow.h"
-#include "metamagic.h"
-#include "qlastic.h"
-#include "task1part.h"
 #include <cstdlib>
 #include <format>
+
 #include <imgui/imgui.h>
 #include <qcoreapplication.h>
-#include <qjsonarray.h>
-#include <qjsondocument.h>
-#include <qjsonobject.h>
 #include <qobject.h>
+
+#include "metamagic.h"
+#include "qlastic.h"
+#include "task1_mainwindow.h"
+#include "task1part.h"
 
 /// Сортирует массив по убыванию количества
 /// (за что этот алгоритм?)
@@ -140,8 +139,9 @@ void Task1Window::Render() {
       ImGui::Begin("Enter the count", &action_win_open_);
       ImGui::InputInt("", &add_size_);
       if (ImGui::Button("Continue")) {
-        if (add_size_ == 0) {
+        if (add_size_ <= 0) {
           curr_action_ = kNoAction;
+          text_ += "Input cancelled\n";
         } else {
           FactoryPart *new_arr = static_cast<FactoryPart *>(
               realloc(array_, sizeof(FactoryPart) * (array_size_ + add_size_)));
@@ -163,10 +163,9 @@ void Task1Window::Render() {
       curr_action_ = kNoAction;
     }
     break;
+  case kInputUntil:
   case kInputItems:
     meta_input_.Render();
-    break;
-  case kInputUntil:
     break;
     // if (action_win_open) {
     //   search_input.Render(action_win_open);
@@ -327,6 +326,7 @@ void Task1Window::FreeArray() {
   for (int i = 0; i < filled_in_; ++i) {
     delete array_[i].doc_id;
     array_[i].doc_id = nullptr;
+    array_[i].name.~QString();
   }
   filled_in_ = 0;
   array_size_ = 0;

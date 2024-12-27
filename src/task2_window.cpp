@@ -1,22 +1,14 @@
-#include "task2_window.h"
-#include "metamagic.h"
-#include "qlastic.h"
-#include "serializer.h"
-#include "task2book.h"
 #include <cstdlib>
 #include <format>
+
 #include <imgui/imgui.h>
 #include <qcoreapplication.h>
-#include <qjsonarray.h>
-#include <qjsondocument.h>
-#include <qjsonobject.h>
-#include <qjsonvalue.h>
 #include <qobject.h>
 
-static float EvilVolumeCrutch(float weight, int index) {
-  const float kDensityTable[] = {7850.0, 8700.0, 8400.0, 4540.0};
-  return weight / kDensityTable[index];
-}
+#include "metamagic.h"
+#include "qlastic.h"
+#include "task2_window.h"
+#include "task2book.h"
 
 void Task2Window::DrawMenuWindow() {
   auto io = ImGui::GetIO();
@@ -102,8 +94,9 @@ void Task2Window::Render() {
       ImGui::Begin("Enter the count", &action_win_open_);
       ImGui::InputInt("", &add_size_);
       if (ImGui::Button("Continue")) {
-        if (add_size_ == 0) {
+        if (add_size_ <= 0) {
           curr_action_ = kNoAction;
+          text_ += "Input cancelled\n";
         } else {
           LibraryBook *new_arr = static_cast<LibraryBook *>(
               realloc(array_, sizeof(LibraryBook) * (array_size_ + add_size_)));
@@ -288,6 +281,10 @@ void Task2Window::FreeArray() {
   for (int i = 0; i < filled_in_; ++i) {
     delete array_[i].doc_id;
     array_[i].doc_id = nullptr;
+    array_[i].author.~QString();
+    array_[i].publishing_house.~QString();
+    array_[i].registry_number.~QString();
+    array_[i].title.~QString();
   }
   filled_in_ = 0;
   array_size_ = 0;
@@ -323,12 +320,12 @@ void Task2Window::SendSearch(QJsonObject obj) {
   qls_->Send(&search_);
 }
 
-void Task2Window::SendSearchWithSort(QObject *obj) {
+void Task2Window::SendSearchWithSort(QObject * /* unused */) {
   curr_action_ = kWait;
   next_action_ = kNoAction;
 
   // clang-format off
-    QJsonObject res2{
+  QJsonObject res2{
     {
       "query", QJsonObject{{
             {"range", QJsonObject{{

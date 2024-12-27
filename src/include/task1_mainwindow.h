@@ -79,7 +79,7 @@ private:
   MetaInput meta_input_{nullptr, "Part input"};
   MetaViewer meta_viewer_;
   MetaFactoryPart part_wrapper_;
-  [[deprecated]]
+
   bool action_win_open_;
   FactoryPart *array_ = nullptr;
   int array_size_ = 0;

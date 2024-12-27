@@ -49,7 +49,7 @@ public slots:
   void IndexCreateFailed();
 
   void SendSearch(QJsonObject obj);
-  void SendSearchWithSort(QObject *obj);
+  void SendSearchWithSort(QObject * /* unused */);
 
   void DeleteSingleItem(int n);
   void DeleteSucceed();
@@ -62,6 +62,7 @@ public slots:
 
 private:
   void FreeArray();
+  void DrawMenuWindow();
   Qlastic *qls_;
   QlBulkCreateDocuments create_{"task2_library"};
   QlBulkDeleteDocuments delete_{"task2_library"};
@@ -72,7 +73,6 @@ private:
   MetaInput property_selector_{nullptr, "Input search data"};
 
   std::string text_;
-  void DrawMenuWindow();
   LibraryBook buf_;
   MetaBookSelector search_selector_;
   Action curr_action_ = kNoAction;
@@ -82,7 +82,7 @@ private:
   MetaLibraryBook part_wrapper_;
   MetaBookSelector book_selector_wrapper_;
   LibraryBook selector_buf_;
-  [[deprecated]]
+
   bool action_win_open_;
   LibraryBook *array_ = nullptr;
   int array_size_ = 0;
