@@ -60,6 +60,8 @@ public slots:
   void UpdateSucceed();
   void UpdateFailed();
 
+  void InputUntilCondition();
+
 private:
   void FreeArray();
   Qlastic *qls_;

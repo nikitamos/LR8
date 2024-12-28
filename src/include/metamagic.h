@@ -187,10 +187,11 @@ public:
 
   void SetOpen(bool v) { open_ = v; }
   bool IsOpen() const { return open_; }
+  bool IsSatysfying(QObject *check);
 signals:
   void Delete(QJsonObject);
   void Search(QJsonObject);
-  void MakeInput(QJsonObject);
+  void InputUntil(QJsonObject);
   void Cancel();
 
 private:

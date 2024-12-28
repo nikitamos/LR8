@@ -57,8 +57,6 @@ void Task1Window::DrawMenuWindow() {
         curr_action_ = kInputTheCount;
       }
       if (ImGui::MenuItem("Until condition")) {
-        action_win_open_ = true;
-        curr_action_ = kInputUntil;
       }
       ImGui::EndMenu();
     }
@@ -106,6 +104,12 @@ void Task1Window::PartInputSubmitted(QObject *obj) {
     qls_->Send(&update_);
 
     return;
+  }
+  if (curr_action_ == kInputUntil) {
+    if (!property_selector_.IsSatysfying(&part_wrapper_)) {
+      array_ =
+          (FactoryPart *)realloc(array_, sizeof(FactoryPart) * (++array_size_));
+    }
   }
   ++filled_in_;
   create_.AddDocument(&part_wrapper_);
@@ -167,16 +171,6 @@ void Task1Window::Render() {
   case kInputItems:
     meta_input_.Render();
     break;
-    // if (action_win_open) {
-    //   search_input.Render(action_win_open);
-    // } else {
-    //   if (search_input.IsSubmitted()) {
-    //     int x;
-    //     InputInterface(action_win_open, &buffer, x);
-    //   } else {
-    //     curr_action = kNoAction;
-    //   }
-    // }
   case kViewWhole:
     meta_viewer_.Render();
     break;
@@ -252,6 +246,8 @@ Task1Window::Task1Window(Qlastic *qls, QObject *parent)
                    &Task1Window::SendSearch);
   QObject::connect(&property_selector_, &FieldValueSelector::Delete, this,
                    &Task1Window::SendSearchDelete);
+  QObject::connect(&property_selector_, &FieldValueSelector::InputUntil, this,
+                   &Task1Window::InputUntilCondition);
 
   QObject::connect(&delete_, &QlBulkDeleteDocuments::Success, this,
                    &Task1Window::DeleteSucceed);
@@ -415,4 +411,13 @@ void Task1Window::UpdateFailed() {
   text_ += "Modify failed\n";
   curr_action_ = next_action_;
   next_action_ = kNoAction;
+}
+void Task1Window::InputUntilCondition() {
+  action_win_open_ = true;
+  curr_action_ = kInputUntil;
+  old_size_ = array_size_;
+  array_ =
+      (FactoryPart *)realloc(array_, sizeof(FactoryPart) * (++array_size_));
+  ++curr_item_;
+  meta_input_.Reset();
 }

@@ -183,6 +183,7 @@ void MetaViewer::Render() {
 }
 
 FieldValueSelector::FieldValueSelector(QMetaType mt) : selected_(0) {
+  selected_ = 0;
   label_ = "##" + std::to_string(Input::rand());
   SetPrototype(mt);
 }
@@ -226,7 +227,7 @@ void FieldValueSelector::Render(const char *name) {
     ImGui::NewLine();
   }
   if (ImGui::Button("Input until")) {
-    emit MakeInput(JsonBody());
+    emit InputUntil(JsonBody());
     open_ = false;
   }
   ImGui::SameLine();
@@ -277,4 +278,16 @@ void FieldValueSelector::ClearInput() {
   for (auto &i : inputs_) {
     delete i;
   }
+}
+
+bool FieldValueSelector::IsSatysfying(QObject *check) {
+  auto prop = inputs_[selected_]->property_name;
+  auto check_value = check->property(prop.toUtf8());
+  if (!check_value.isValid() ||
+      check_value.metaType() != inputs_[selected_]->Get().metaType()) {
+    return false;
+  }
+  auto input_value = inputs_[selected_]->Get();
+  qDebug() << "Comparing" << input_value << "vs." << check_value;
+  return input_value == check_value;
 }
