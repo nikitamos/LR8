@@ -12,42 +12,45 @@ set(CMAKE_AUTOMOC On)
 
 add_subdirectory(imtui)
 
-add_executable(task1 
-    src/task1.cpp
-    src/serializer.cpp
+add_library(lr8core SHARED
     src/metamagic.cpp
     src/qlastic.cpp
     src/metamagic.cpp
-    src/task1_mainwindow.cpp
+    src/serializer.cpp
 
     src/include/metamagic.h
     src/include/qlastic.h
+    src/include/serializer.h
+    src/include/window.h
+)
+target_include_directories(lr8core PRIVATE src/include)
+target_link_libraries(lr8core imtui Qt6::Core Qt6::Network)
+
+add_executable(task1 
+
+    $<TARGET_OBJECTS:lr8core>
+    src/task1.cpp
+    src/task1_mainwindow.cpp
+
     src/include/task1_mainwindow.h
     src/include/task1part.h
-    src/include/window.h
 )
 add_executable(task2
     src/task2.cpp
-    src/serializer.cpp
-    src/metamagic.cpp
-    src/qlastic.cpp
-    src/metamagic.cpp
     src/task2_window.cpp
 
-    src/include/metamagic.h
-    src/include/qlastic.h
     src/include/task2_window.h
     src/include/task2book.h
-    src/include/window.h
 )
 
-set_target_properties(task1 task2 PROPERTIES
+set_target_properties(task1 task2 lr8core PROPERTIES
     CXX_STANDARD 20)
 target_include_directories(task1 PRIVATE src/include)
 target_link_libraries(task1 PRIVATE
     imtui
     ${CURSES_LIBRARIES}
     Qt6::Core Qt6::Network
+    lr8core
 )
 
 target_include_directories(task2 PRIVATE src/include)
@@ -55,4 +58,5 @@ target_link_libraries(task2 PRIVATE
     imtui
     ${CURSES_LIBRARIES}
     Qt6::Core Qt6::Network
+    lr8core
 )
