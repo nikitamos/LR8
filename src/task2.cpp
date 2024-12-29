@@ -21,9 +21,6 @@
 #include <QCoreApplication>
 #include <QThread>
 
-typedef unsigned int u32;
-typedef float f32;
-
 const QString kTask2Index = "task2_library";
 
 int main(int argc, char **argv) {

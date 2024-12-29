@@ -21,9 +21,6 @@
 #include <QCoreApplication>
 #include <QThread>
 
-typedef unsigned int u32;
-typedef float f32;
-
 const QString kTask1Index = "task1_factory";
 
 int main(int argc, char **argv) {

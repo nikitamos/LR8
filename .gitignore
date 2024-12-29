@@ -4,3 +4,4 @@ compile_commands.json
 /certs
 /.cache
 imgui.ini
+CMakeLists.txt.user

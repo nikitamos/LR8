@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(lr6 LANGUAGES C CXX)
+project(lr8 LANGUAGES C CXX)
 
 set(CURSES_NEED_NCURSES 1)
 set(CURSES_NEED_WIDE 1)
