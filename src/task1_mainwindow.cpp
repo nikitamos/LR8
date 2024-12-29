@@ -105,7 +105,6 @@ void Task1Window::PartInputSubmitted(QObject *obj) {
 
     return;
   }
-  qDebug() << "pis" << array_size_ << " " << curr_item_;
   if (curr_action_ == kInputUntil) {
     if (!property_selector_.IsSatysfying(&part_wrapper_)) {
       array_ = static_cast<FactoryPart *>(
@@ -167,6 +166,7 @@ void Task1Window::Render() {
             curr_item_ = old_size_;
             meta_input_.Reset();
             part_wrapper_.SetTarget(new_arr + old_size_);
+            meta_input_.SetTarget(&part_wrapper_);
           }
         }
       }
@@ -207,7 +207,6 @@ void Task1Window::Render() {
 Task1Window::Task1Window(Qlastic *qls, QObject *parent)
     : Window(parent), part_wrapper_(nullptr), qls_(qls),
       property_selector_(MetaFactoryPart::staticMetaObject.metaType()) {
-  meta_input_.SetTarget(&part_wrapper_);
   QObject::connect(&meta_input_, &MetaInput::Submit, this,
                    &Task1Window::PartInputSubmitted);
   QObject::connect(&meta_input_, &MetaInput::Cancel, this,

@@ -130,6 +130,7 @@ void Task2Window::Render() {
             curr_item_ = old_size_;
             meta_input_.Reset();
             part_wrapper_.SetTarget(array_ + old_size_);
+            meta_input_.RepopulateFromTarget();
           }
         }
       }
