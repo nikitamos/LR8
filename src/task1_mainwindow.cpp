@@ -132,6 +132,10 @@ void Task1Window::PartInputCancelled() {
 }
 
 void Task1Window::Render() {
+  if (!win_open_) {
+    emit Closed();
+    return;
+  }
   auto io = ImGui::GetIO();
 
   switch (curr_action_) {

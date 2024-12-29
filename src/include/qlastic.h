@@ -14,6 +14,7 @@
 #include <qobject.h>
 #include <qtmetamacros.h>
 #include <qurl.h>
+#include <qurlquery.h>
 
 class QlasticOperation : public QObject {
   Q_OBJECT
@@ -21,7 +22,8 @@ public:
   QlasticOperation() {};
   virtual ~QlasticOperation() {
     // deleteLater?
-    delete repl_;
+    // delete repl_;
+    repl_ = nullptr;
   }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) = 0;
 public slots:
@@ -67,6 +69,8 @@ public:
     } else {
       emit Success();
     }
+    repl_->deleteLater();
+    repl_ = nullptr;
   }
 signals:
   void Success();
@@ -80,7 +84,11 @@ class QlSearch : public QlasticOperation {
   Q_OBJECT
 public:
   explicit QlSearch(QString index, QJsonDocument body)
-      : index_(index), body_(body.toJson()) {}
+      : index_(index), body_(body.toJson()) {
+    QUrlQuery q;
+    q.addQueryItem("size", "10000");
+    SetParams(q);
+  }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override {
     auto x = repl_->readAll();
@@ -93,6 +101,7 @@ public:
       emit Success(res.object());
     }
     repl_->deleteLater();
+    repl_ = nullptr;
   }
   void SetBody(QString body) { body_ = body; }
   void SetParams(QString params) { params_ = params; }
@@ -101,7 +110,7 @@ signals:
   void Failure();
   void Success(QJsonObject res);
 
-private:
+protected:
   QString params_;
   QString body_;
   QString index_;
@@ -166,6 +175,14 @@ private:
   QString index_;
   QString id_;
   QString body_;
+};
+
+class QlDeleteByQuery : public QlSearch {
+  Q_OBJECT
+public:
+  explicit QlDeleteByQuery(QString index, QJsonDocument body)
+      : QlSearch(index, body) {}
+  virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url);
 };
 
 class Qlastic : public QObject {

@@ -46,24 +46,40 @@ int main(int argc, char **argv) {
   QObject::connect(&mw, &Window::Closed, &app, &QCoreApplication::quit);
 
   QTimer timer;
-  QObject::connect(&timer, &QTimer::timeout, [&mw, screen]() {
-    ImTui_ImplNcurses_NewFrame();
-    ImTui_ImplText_NewFrame();
-    ImGui::NewFrame();
+  bool finish = false;
+  bool *finptr = &finish;
+  auto conn =
+      QObject::connect(&timer, &QTimer::timeout, [&mw, screen, finptr]() {
+        if (*finptr) {
+          return;
+        }
+        ImTui_ImplNcurses_NewFrame();
+        ImTui_ImplText_NewFrame();
+        ImGui::NewFrame();
 
-    ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(45, 20), ImGuiCond_FirstUseEver);
-    mw.Render();
+        ImGui::SetNextWindowPos(ImVec2(30, 5), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(45, 20), ImGuiCond_FirstUseEver);
+        mw.Render();
 
-    ImGui::Render();
+        ImGui::Render();
 
-    ImTui_ImplText_RenderDrawData(ImGui::GetDrawData(), screen);
-    ImTui_ImplNcurses_DrawScreen();
-  });
+        auto *data = ImGui::GetDrawData();
+        if (data != nullptr && !*finptr) {
+          ImTui_ImplText_RenderDrawData(ImGui::GetDrawData(), screen);
+          ImTui_ImplNcurses_DrawScreen();
+        }
+      });
 
-  // ImTui_ImplText_Shutdown();
-  // ImTui_ImplNcurses_Shutdown();
   timer.setInterval(1000 / 30);
   timer.start();
+
+  QObject::connect(&mw, &Window::Closed, &app, QCoreApplication::quit);
+  QObject::connect(&app, &QCoreApplication::aboutToQuit, [&conn, finptr]() {
+    *finptr = true;
+    // QObject::disconnect(conn);
+    ImTui_ImplText_Shutdown();
+    ImTui_ImplNcurses_Shutdown();
+  });
+
   return QCoreApplication::exec();
 }

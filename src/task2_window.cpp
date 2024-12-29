@@ -83,6 +83,10 @@ void Task2Window::PartInputCancelled() {
 }
 
 void Task2Window::Render() {
+  if (!win_open_) {
+    emit Closed();
+    return;
+  }
   auto io = ImGui::GetIO();
 
   switch (curr_action_) {
@@ -123,16 +127,6 @@ void Task2Window::Render() {
     break;
   case kInputUntil:
     break;
-    // if (action_win_open) {
-    //   search_input.Render(action_win_open);
-    // } else {
-    //   if (search_input.IsSubmitted()) {
-    //     int x;
-    //     InputInterface(action_win_open, &buffer, x);
-    //   } else {
-    //     curr_action = kNoAction;
-    //   }
-    // }
   case kViewWhole:
     meta_viewer_.Render();
     break;

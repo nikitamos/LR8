@@ -43,7 +43,15 @@ void QlSearch::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
   req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
   qDebug() << base_url;
   SetupReply(mgr.get(req, body_.toUtf8()));
-  qDebug() << "Exit search!";
+}
+
+void QlDeleteByQuery::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
+  base_url.setPath("/" + index_ + "/_delete_by_query");
+  base_url.setQuery(params_);
+  QNetworkRequest req(base_url);
+  req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+  qDebug() << base_url;
+  SetupReply(mgr.get(req, body_.toUtf8()));
 }
 
 void QlBulkCreateDocuments::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
@@ -135,6 +143,8 @@ void QlUpdateDocument::RequestFinished() {
   } else {
     emit Success();
   }
+  repl_->deleteLater();
+  repl_ = nullptr;
 }
 QlUpdateDocument &QlUpdateDocument::SetObject(QObject *obj) {
   QJsonObject body;
