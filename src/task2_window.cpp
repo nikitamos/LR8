@@ -14,10 +14,7 @@
 static void FreeLibraryBookFields(LibraryBook *b) {
   delete b->doc_id;
   b->doc_id = nullptr;
-  b->author.~QString();
-  b->publishing_house.~QString();
-  b->registry_number.~QString();
-  b->title.~QString();
+  b->~LibraryBook();
 }
 
 void Task2Window::DrawMenuWindow() {

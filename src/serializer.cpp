@@ -43,9 +43,10 @@ void DeserializeBook(LibraryBook *p, const QJsonObject &obj) {
   QString tmpstr = obj["_id"].toString();
   p->doc_id = new QString(tmpstr);
   new (&p->author) QString(src["author"].toString());
-  new (&p->publishing_house) QString(src["publsihing_house"].toString());
+  new (&p->publishing_house) QString(src["publishing_house"].toString());
   new (&p->registry_number) QString(src["registry_number"].toString());
   new (&p->title) QString(src["title"].toString());
   p->page_count = src["page_count"].toInt();
   p->publishing_year = src["publishing_year"].toInt();
+  p->depository_int = src["depository"].toInt();
 }

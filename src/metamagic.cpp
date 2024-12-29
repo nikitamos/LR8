@@ -260,17 +260,6 @@ QJsonObject FieldValueSelector::JsonBody() {
   if (all_) {
     return QJsonObject();
   }
-  /*
-  {
-    "query": {
-      "match": {
-        "<FIELD>": {
-          "query" : "<QUERY>"
-        }
-      }
-    }
-  }
-  */
 
   auto qjsval = inputs_[selected_]->Get().toJsonValue();
   // clang-format off
