@@ -104,6 +104,7 @@ void MetaInput::SetTarget(QObject *new_target) {
 
 void MetaInput::PopulateFromTarget(QObject *new_target) {
   SetTarget(new_target);
+  RepopulateFromTarget();
 }
 
 void MetaInput::Render() {

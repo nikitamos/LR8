@@ -108,9 +108,10 @@ public:
       delete it;
     }
   }
-  /// The same as `SetTarget`
+  /// The same as `SetTarget`, but also displays the values of `new_target`'s
+  /// properties
   void PopulateFromTarget(QObject *new_target);
-  /// Sets a new target and updates the window content.
+  /// Sets a new target with default window content.
   /// The caller must ensure that `new_target` is valid and properly deleted
   void SetTarget(QObject *new_target);
   QObject *GetTarget();

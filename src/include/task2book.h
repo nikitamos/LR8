@@ -62,12 +62,9 @@ public:
   explicit MetaBookSelector(LibraryBook *inner, QObject *parent = nullptr)
       : QObject(parent), inner_(inner) {}
   void SetTarget(LibraryBook *target) { inner_ = target; }
-
-  PROP(QString, author)
   PROP(int, publishing_year)
 
 private:
-  QString name_;
   LibraryBook *inner_;
 };
 
