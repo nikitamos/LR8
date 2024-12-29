@@ -17,7 +17,6 @@ enum Action {
   kViewWhole,
   kModifyItem,
   kDeleteDocs,
-  kModifyRemoveAll,
   kWait,
   kInputProperty,
   kNoAction
@@ -42,12 +41,6 @@ public slots:
   void SearchSucceed(QJsonObject res);
   void SearchFailed();
 
-  void IndexDeleted();
-  void IndexDeleteFailed();
-
-  void IndexCreated();
-  void IndexCreateFailed();
-
   void SendSearch(QJsonObject obj);
   void SendSearchDelete(QJsonObject obj);
 
@@ -68,8 +61,6 @@ private:
   QlBulkCreateDocuments create_{"task1_factory"};
   QlBulkDeleteDocuments delete_{"task1_factory"};
   QlSearch search_{"task1_factory", QJsonDocument()};
-  QlDeleteIndex index_delete_{"task1_factory"};
-  QlCreateIndex index_create_{"task1_factory"};
   QlUpdateDocument update_{"task1_factory"};
   FieldValueSelector property_selector_;
 

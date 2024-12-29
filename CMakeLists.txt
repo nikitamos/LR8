@@ -27,8 +27,6 @@ target_include_directories(lr8core PRIVATE src/include)
 target_link_libraries(lr8core imtui Qt6::Core Qt6::Network)
 
 add_executable(task1 
-
-    $<TARGET_OBJECTS:lr8core>
     src/task1.cpp
     src/task1_mainwindow.cpp
 

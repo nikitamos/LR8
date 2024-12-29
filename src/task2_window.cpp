@@ -135,9 +135,6 @@ void Task2Window::Render() {
   case kDeleteDocs:
     property_selector_.Render();
     break;
-  case kModifyRemoveAll:
-    qls_->Send(&index_delete_);
-    break;
   case kNoAction:
     action_win_open_ = false;
     DrawMenuWindow();
@@ -187,15 +184,6 @@ Task2Window::Task2Window(Qlastic *qls, QObject *parent)
                    &Task2Window::SearchSucceed);
   QObject::connect(&search_, &QlSearch::Failure, this,
                    &Task2Window::SearchFailed);
-
-  QObject::connect(&index_delete_, &QlDeleteIndex::Success, this,
-                   &Task2Window::IndexDeleted);
-  QObject::connect(&index_delete_, &QlDeleteIndex::Failure, this,
-                   &Task2Window::IndexDeleteFailed);
-  QObject::connect(&index_create_, &QlCreateIndex::Success, this,
-                   &Task2Window::IndexCreated);
-  QObject::connect(&index_create_, &QlCreateIndex::Failure, this,
-                   &Task2Window::IndexCreateFailed);
 
   QObject::connect(&property_selector_, &MetaInput::Cancel, this,
                    &Task2Window::CancelAction);
@@ -284,24 +272,6 @@ void Task2Window::FreeArray() {
   array_size_ = 0;
   free(array_);
   array_ = nullptr;
-}
-
-void Task2Window::IndexDeleted() {
-  FreeArray();
-  text_ += "Index deleted\n";
-  qls_->Send(&index_create_);
-}
-void Task2Window::IndexDeleteFailed() {
-  text_ += "Failed to delete index\n";
-  curr_action_ = kNoAction;
-}
-void Task2Window::IndexCreated() {
-  text_ += "Index created\n";
-  curr_action_ = kNoAction;
-}
-void Task2Window::IndexCreateFailed() {
-  text_ += "Failed to create index\n";
-  curr_action_ = kNoAction;
 }
 
 void Task2Window::SendSearch(QJsonObject obj) {
