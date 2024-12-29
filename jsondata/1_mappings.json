@@ -1,0 +1,44 @@
+{
+    "mappings": {
+        "runtime": {
+            "volume": {
+                "type": "double",
+                "script": {
+                    "source": "emit((float)doc['weight'].value / ((float)params['density'][(int)doc['material'].value]))",
+                    "lang": "painless",
+                    "params": {
+                        "density": [
+                            7850.0,
+                            8700.0,
+                            8400.0,
+                            4540.0
+                        ]
+                    }
+                }
+            }
+        },
+        "properties": {
+            "count": {
+                "type": "long"
+            },
+            "department_no": {
+                "type": "long"
+            },
+            "material": {
+                "type": "long"
+            },
+            "name": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                    }
+                }
+            },
+            "weight": {
+                "type": "long"
+            }
+        }
+    }
+}

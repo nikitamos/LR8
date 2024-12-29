@@ -8,7 +8,6 @@ include_directories(${CURSES_INCLUDE_DIRS})
 add_compile_options(${CURSES_CFLAGS})
 
 find_package(Qt6 COMPONENTS Core Network REQUIRED)
-set(CMAKE_AUTOMOC On)
 
 add_subdirectory(imtui)
 
@@ -42,7 +41,9 @@ add_executable(task2
 )
 
 set_target_properties(task1 task2 lr8core PROPERTIES
-    CXX_STANDARD 20)
+    CXX_STANDARD 20
+    AUTOMOC ON
+)
 target_include_directories(task1 PRIVATE src/include)
 target_link_libraries(task1 PRIVATE
     imtui

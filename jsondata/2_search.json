@@ -1,0 +1,14 @@
+{
+    "query": {
+        "range": {
+            "publishing_year": {
+                "gte": "<YEAR>"
+            }
+        }
+    },
+    "sort": [
+        {
+            "author": "asc"
+        }
+    ]
+}

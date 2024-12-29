@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+ELASTIC='http://localhost:9200/'
+curl -X PUT $ELASTIC/task1_factory -H 'Content-type: application/json' -d @jsondata/1_mappings.json
+curl -X PUT $ELASTIC/task2_library -H 'Content-type: application/json' -d @jsondata/2_mappings.json

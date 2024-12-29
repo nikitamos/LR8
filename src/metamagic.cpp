@@ -291,3 +291,11 @@ bool FieldValueSelector::IsSatysfying(QObject *check) {
   qDebug() << "Comparing" << input_value << "vs." << check_value;
   return input_value == check_value;
 }
+
+std::string StringifySnakeCase(const char *text) {
+  QString text2 = text;
+  text2.replace("_", " ");
+  std::string res = text2.toStdString();
+  res[0] = toupper(res[0]);
+  return res;
+}

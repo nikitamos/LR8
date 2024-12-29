@@ -2,8 +2,6 @@
 #include <imtui/imtui-impl-ncurses.h>
 #include <imtui/imtui.h>
 
-#include <clocale>
-
 #include <QTimer>
 #include <iostream>
 #include <qcoreapplication.h>
@@ -34,8 +32,6 @@ int main(int argc, char **argv) {
   getchar();
 
   Qlastic qls(QUrl("http://localhost:9200/"));
-  QlCreateIndex ci{kTask1Index};
-  qls.Send(&ci);
 
   IMGUI_CHECKVERSION();
   auto *ctx = ImGui::CreateContext();

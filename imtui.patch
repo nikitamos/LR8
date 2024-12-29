@@ -1,0 +1,24 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index dcec030..68ac198 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
+ add_library(imtui ${IMTUI_LIBRARY_TYPE}
+     imtui-impl-text.cpp
++    imtui-impl-ncurses.cpp
+     )
+ 
+ target_include_directories(imtui PUBLIC
+diff --git a/third-party/CMakeLists.txt b/third-party/CMakeLists.txt
+index b9c1f67..9d7f201 100644
+--- a/third-party/CMakeLists.txt
++++ b/third-party/CMakeLists.txt
+@@ -18,6 +18,7 @@ add_library(imgui-for-imtui STATIC
+     imgui/imgui/imgui_demo.cpp
+     imgui/imgui/imgui_widgets.cpp
+     imgui/imgui/imgui_tables.cpp
++    imgui/imgui/misc/cpp/imgui_stdlib.cpp
+     )
+ 
+ target_include_directories(imgui-for-imtui INTERFACE

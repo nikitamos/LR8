@@ -1,0 +1,24 @@
+{
+    "mappings": {
+        "properties": {
+            "author": {
+                "type": "keyword"
+            },
+            "page_count": {
+                "type": "long"
+            },
+            "publishing_house": {
+                "type": "text"
+            },
+            "publishing_year": {
+                "type": "long"
+            },
+            "registry_number": {
+                "type": "text"
+            },
+            "title": {
+                "type": "text"
+            }
+        }
+    }
+}

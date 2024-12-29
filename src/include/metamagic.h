@@ -25,13 +25,7 @@ inline QMetaEnum MetaTypeToMetaEnum(const QMetaType &t) {
   return enclosing->enumerator(index);
 }
 
-static std::string StringifySnakeCase(const char *text) {
-  QString text2 = text;
-  text2.replace("_", " ");
-  std::string res = text2.toStdString();
-  res[0] = toupper(res[0]);
-  return res;
-}
+std::string StringifySnakeCase(const char *text);
 
 struct Input {
   explicit Input(QString pname);
@@ -83,16 +77,6 @@ struct FloatInput : public BufInput<float> {
     ImGui::Text("%s", text.c_str());
     ImGui::InputFloat(label.c_str(), &buf);
   }
-};
-
-struct TextInput : public Input {
-  explicit TextInput(QString p) : Input(p) { memset(buf, 0, sizeof(buf)); }
-  virtual void Render() override {
-    ImGui::Text("%s", text.c_str());
-    ImGui::InputText(label.c_str(), buf, sizeof(buf));
-  }
-  virtual QVariant Get() override { return QString::fromUtf8(buf); }
-  char buf[80];
 };
 
 struct EnumInput : public BufInput<int> {
