@@ -12,11 +12,13 @@
 
 #include "serializer.h"
 
+/// An abstract class representing an Elasticsearch API call
 class QlasticOperation : public QObject {
   Q_OBJECT
 public:
   QlasticOperation() {};
   virtual ~QlasticOperation() { repl_ = nullptr; }
+  /// Sends the request via given manager and the base url
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) = 0;
 public slots:
   virtual void RequestFinished() = 0;
@@ -92,6 +94,7 @@ class QlBulkCreateDocuments : public QlasticOperation {
   Q_OBJECT
 public:
   explicit QlBulkCreateDocuments(QString index) : index_(index) {}
+  /// Serializes the `doc` and adds it to the request
   void AddDocument(QObject *doc) {
     docs_.push_back(QJsonDocument(Serialize(doc)));
   }
@@ -111,6 +114,7 @@ class QlBulkDeleteDocuments : public QlasticOperation {
   Q_OBJECT
 public:
   explicit QlBulkDeleteDocuments(QString index) : index_(index) {}
+  /// Add document with given `id` to the request
   void AddDocument(QString id) { ids_.push_back(id); }
   void ClearBody() { ids_.clear(); }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
@@ -132,7 +136,9 @@ public:
       : index_(index), id_(id) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override;
+  /// Set the id of the document
   void SetId(QString id) { id_ = id; }
+  /// Serializes the object and uses its properties to form a request
   QlUpdateDocument &SetObject(QObject *obj);
   QString GetId() const { return id_; }
 

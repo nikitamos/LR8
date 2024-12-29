@@ -21,6 +21,7 @@ typedef struct FactoryPart {
   QString name;
   int32_t count;
   int32_t department_no;
+  /// o bloody hell, why?
   union {
     MaterialTag mt;
     int mt_int;
@@ -59,4 +60,5 @@ private:
   FactoryPart *inner_;
 };
 
+/// Deserializes the given JSON object and intializes the memory pointed by `p`.
 void DeserializePart(FactoryPart *p, const QJsonObject &obj);
