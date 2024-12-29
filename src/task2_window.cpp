@@ -11,6 +11,15 @@
 #include "task2_window.h"
 #include "task2book.h"
 
+static void FreeLibraryBookFields(LibraryBook *b) {
+  delete b->doc_id;
+  b->doc_id = nullptr;
+  b->author.~QString();
+  b->publishing_house.~QString();
+  b->registry_number.~QString();
+  b->title.~QString();
+}
+
 void Task2Window::DrawMenuWindow() {
   auto io = ImGui::GetIO();
   ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
@@ -24,10 +33,6 @@ void Task2Window::DrawMenuWindow() {
       if (ImGui::MenuItem("The count")) {
         action_win_open_ = true;
         curr_action_ = kInputTheCount;
-      }
-      if (ImGui::MenuItem("Until condition")) {
-        action_win_open_ = true;
-        curr_action_ = kInputUntil;
       }
       ImGui::EndMenu();
     }
@@ -44,8 +49,16 @@ void Task2Window::DrawMenuWindow() {
       }
       ImGui::EndMenu();
     }
-    if (ImGui::BeginMenu("Select Items")) {
-      curr_action_ = kInputProperty;
+    if (ImGui::BeginMenu("Select books")) {
+      if (ImGui::MenuItem("All")) {
+        search_.SetBody("{}");
+        curr_action_ = kWait;
+        next_action_ = kNoAction;
+        qls_->Send(&search_);
+      }
+      if (ImGui::MenuItem("Published after")) {
+        curr_action_ = kInputProperty;
+      }
       ImGui::EndMenu();
     }
     ImGui::EndMenuBar();
@@ -72,6 +85,7 @@ void Task2Window::PartInputSubmitted(QObject *obj) {
     curr_item_ = 0;
   } else {
     part_wrapper_.SetTarget(&array_[++curr_item_]);
+    meta_input_.RepopulateFromTarget();
   }
 }
 
@@ -115,6 +129,7 @@ void Task2Window::Render() {
             curr_action_ = kInputItems;
             curr_item_ = old_size_;
             meta_input_.Reset();
+            part_wrapper_.SetTarget(array_ + old_size_);
           }
         }
       }
@@ -125,8 +140,6 @@ void Task2Window::Render() {
     break;
   case kInputItems:
     meta_input_.Render();
-    break;
-  case kInputUntil:
     break;
   case kViewWhole:
     meta_viewer_.Render();
@@ -262,12 +275,7 @@ void Task2Window::FreeArray() {
     return;
   }
   for (int i = 0; i < filled_in_; ++i) {
-    delete array_[i].doc_id;
-    array_[i].doc_id = nullptr;
-    array_[i].author.~QString();
-    array_[i].publishing_house.~QString();
-    array_[i].registry_number.~QString();
-    array_[i].title.~QString();
+    FreeLibraryBookFields(array_ + i);
   }
   filled_in_ = 0;
   array_size_ = 0;
@@ -323,10 +331,12 @@ void Task2Window::DeleteSingleItem(int n) {
   curr_action_ = kWait;
   delete_.ClearBody();
   delete_.AddDocument(*array_[n].doc_id);
-  delete array_->doc_id;
+  delete array_[n].doc_id;
   for (int i = n + 1; i < filled_in_; ++i) {
     array_[i - 1] = array_[i];
   }
+  array_[filled_in_ - 1].doc_id = nullptr;
+  FreeLibraryBookFields(array_ + filled_in_ - 1);
   array_ = static_cast<LibraryBook *>(
       realloc(array_, sizeof(LibraryBook) * (--array_size_)));
   --filled_in_;
@@ -334,6 +344,9 @@ void Task2Window::DeleteSingleItem(int n) {
     meta_viewer_.SetCollectionSize(filled_in_ - 1);
     meta_viewer_.SetCurrent(n - 1);
     part_wrapper_.SetTarget(array_ + n - 1);
+  }
+  if (filled_in_ == 0) {
+    next_action_ = kNoAction;
   }
   qls_->Send(&delete_);
 }

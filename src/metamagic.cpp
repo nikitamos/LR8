@@ -97,9 +97,7 @@ void MetaInput::SetTarget(QObject *new_target) {
 
 void MetaInput::PopulateFromTarget(QObject *new_target) {
   SetTarget(new_target);
-  for (auto &i : this->item_) {
-    i->Set(new_target->property(i->property_name.toUtf8()));
-  }
+  
 }
 
 void MetaInput::Render() {
@@ -126,6 +124,12 @@ void MetaInput::Reset() {
 }
 
 QObject *MetaInput::GetTarget() { return t_; }
+
+void MetaInput::RepopulateFromTarget() {
+for (auto &i : this->item_) {
+    i->Set(t_->property(i->property_name.toUtf8()));
+  }
+}
 
 void MetaViewer::Render() {
   if (!open_) {

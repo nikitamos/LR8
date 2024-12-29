@@ -13,7 +13,6 @@
 enum Action {
   kInputTheCount,
   kInputItems,
-  kInputUntil,
   kViewWhole,
   kModifyItem,
   kDeleteDocs,
@@ -64,6 +63,7 @@ private:
   MetaInput property_selector_{nullptr, "Input search data"};
 
   std::string text_;
+  // Used as buffer for `search_selector_`
   LibraryBook buf_;
   MetaBookSelector search_selector_;
   Action curr_action_ = kNoAction;

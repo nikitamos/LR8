@@ -58,8 +58,6 @@ void Task1Window::DrawMenuWindow() {
         action_win_open_ = true;
         curr_action_ = kInputTheCount;
       }
-      if (ImGui::MenuItem("Until condition")) {
-      }
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("View")) {
@@ -107,10 +105,12 @@ void Task1Window::PartInputSubmitted(QObject *obj) {
 
     return;
   }
+  qDebug() << "pis" << array_size_ << " " << curr_item_;
   if (curr_action_ == kInputUntil) {
     if (!property_selector_.IsSatysfying(&part_wrapper_)) {
       array_ = static_cast<FactoryPart *>(
           realloc(array_, sizeof(FactoryPart) * (++array_size_)));
+      memset(array_ + array_size_ - 1, 0, sizeof(FactoryPart));
     }
   }
   ++filled_in_;
@@ -122,6 +122,7 @@ void Task1Window::PartInputSubmitted(QObject *obj) {
     curr_item_ = 0;
   } else {
     part_wrapper_.SetTarget(&array_[++curr_item_]);
+    meta_input_.RepopulateFromTarget();
   }
 }
 
@@ -165,6 +166,7 @@ void Task1Window::Render() {
             curr_action_ = kInputItems;
             curr_item_ = old_size_;
             meta_input_.Reset();
+            part_wrapper_.SetTarget(new_arr + old_size_);
           }
         }
       }
@@ -203,7 +205,7 @@ void Task1Window::Render() {
 }
 
 Task1Window::Task1Window(Qlastic *qls, QObject *parent)
-    : Window(parent), part_wrapper_(&buf_), qls_(qls),
+    : Window(parent), part_wrapper_(nullptr), qls_(qls),
       property_selector_(MetaFactoryPart::staticMetaObject.metaType()) {
   meta_input_.SetTarget(&part_wrapper_);
   QObject::connect(&meta_input_, &MetaInput::Submit, this,
@@ -355,10 +357,11 @@ void Task1Window::DeleteSingleItem(int n) {
   curr_action_ = kWait;
   delete_.ClearBody();
   delete_.AddDocument(*array_[n].doc_id);
-  delete array_->doc_id;
+  delete array_[n].doc_id;
   for (int i = n + 1; i < filled_in_; ++i) {
     array_[i - 1] = array_[i];
   }
+  array_[array_size_ - 1].name.~QString();
   array_ = static_cast<FactoryPart *>(
       realloc(array_, sizeof(FactoryPart) * (--array_size_)));
   --filled_in_;
@@ -366,6 +369,10 @@ void Task1Window::DeleteSingleItem(int n) {
     meta_viewer_.SetCollectionSize(filled_in_ - 1);
     meta_viewer_.SetCurrent(n - 1);
     part_wrapper_.SetTarget(array_ + n - 1);
+  }
+  if (filled_in_ == 0) {
+    next_action_ = kNoAction;
+    qDebug() << array_ << array_size_ << filled_in_;
   }
   qls_->Send(&delete_);
 }
@@ -393,6 +400,11 @@ void Task1Window::InputUntilCondition() {
   old_size_ = array_size_;
   array_ = static_cast<FactoryPart *>(
       realloc(array_, sizeof(FactoryPart) * (++array_size_)));
-  ++curr_item_;
+  memset(array_ + old_size_, 0, sizeof(FactoryPart));
+  if (old_size_ != 0) {
+    ++curr_item_;
+  } else {
+    curr_item_ = 0;
+  }
   meta_input_.Reset();
 }

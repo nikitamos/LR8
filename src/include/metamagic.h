@@ -89,7 +89,7 @@ struct EnumInput : public BufInput<int> {
 
 class MetaInput : public QObject {
   Q_OBJECT
-  Q_PROPERTY(QObject *target READ GetTarget WRITE SetTarget NOTIFY Submit)
+  Q_PROPERTY(QObject *target READ GetTarget WRITE SetTarget)
 public:
   explicit MetaInput(QObject *target = nullptr, const char *name = nullptr,
                      QObject *parent = nullptr)
@@ -107,8 +107,10 @@ public:
   void SetTarget(QObject *new_target);
   QObject *GetTarget();
 public slots:
+  void RepopulateFromTarget();
   void Populate();
   void Render();
+  // Show the window again
   void Reset();
 signals:
   /// The signal is emitted when the Submit button is pressed after the target

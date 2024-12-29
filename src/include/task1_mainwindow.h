@@ -66,7 +66,6 @@ private:
 
   std::string text_{"\"Was mich nicht umbringt, macht mich staerker.\"\n"};
   void DrawMenuWindow();
-  FactoryPart buf_;
   Action curr_action_ = kNoAction;
   Action next_action_ = kNoAction;
   MetaInput meta_input_{nullptr, "Part input"};
