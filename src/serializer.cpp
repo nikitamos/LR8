@@ -1,8 +1,6 @@
 #include <QMetaProperty>
 #include <qjsonobject.h>
 #include <qjsonvalue.h>
-#include <qlogging.h>
-#include <qobjectdefs.h>
 #include <qvariant.h>
 
 #include "serializer.h"

@@ -1,5 +1,5 @@
 #pragma once
 #include <qjsonobject.h>
+#include <qobject.h>
 
 QJsonObject Serialize(QObject *obj);
-void Deserialize(QObject *target, const QJsonObject &obj);

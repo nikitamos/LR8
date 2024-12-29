@@ -1,24 +1,20 @@
 #include "qlastic.h"
-#include <qabstractsocket.h>
-#include <qhttp2configuration.h>
+
+#include <qjsonarray.h>
 #include <qjsondocument.h>
 #include <qjsonobject.h>
 #include <qjsonvalue.h>
-#include <qlogging.h>
 #include <qnamespace.h>
 #include <qnetworkaccessmanager.h>
 #include <qnetworkreply.h>
 #include <qnetworkrequest.h>
 #include <qobject.h>
-#include <qtmetamacros.h>
 #include <qurl.h>
 
+#include "serializer.h"
+
 Qlastic::Qlastic(QUrl serv, QObject *parent)
-    : url_(serv), mgr_(this), QObject(parent) {
-  // QObject::connect(&mgr_, &QNetworkAccessManager::finished, this,
-  //                  &Qlastic::RequestFinished);
-  QObject::connect(this, &Qlastic::Send, this, &Qlastic::SendHelper);
-}
+    : url_(serv), mgr_(this), QObject(parent) {}
 
 void QlCreateIndex::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
   QUrl req_url = base_url;
@@ -36,17 +32,30 @@ void QlDeleteIndex::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
   SetupReply(mgr.deleteResource(req));
 }
 
-void QlSearch::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
-  base_url.setPath("/" + index_ + "/_search");
-  base_url.setQuery(params_);
-  QNetworkRequest req(base_url);
-  req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-  qDebug() << base_url;
-  SetupReply(mgr.get(req, body_.toUtf8()));
+void QlDeleteIndex::RequestFinished() {
+  if (repl_->error() != 0) {
+    emit Failure(repl_->error());
+  } else {
+    emit Success();
+  }
+  repl_->deleteLater();
+  repl_ = nullptr;
 }
 
-void QlDeleteByQuery::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
-  base_url.setPath("/" + index_ + "/_delete_by_query");
+void QlSearch::RequestFinished() {
+  auto x = repl_->readAll();
+  if (repl_->error() != 0) {
+    emit Failure();
+  } else {
+    auto res = QJsonDocument::fromJson(x);
+    emit Success(res.object());
+  }
+  repl_->deleteLater();
+  repl_ = nullptr;
+}
+
+void QlSearch::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
+  base_url.setPath("/" + index_ + "/_search");
   base_url.setQuery(params_);
   QNetworkRequest req(base_url);
   req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -107,7 +116,6 @@ void QlBulkDeleteDocuments::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
     }}).toJson(QJsonDocument::Compact) + "\n";
     // clang-format on
   }
-  std::cerr << body.toStdString() << '\n';
   SetupReply(mgr.post(req, body.toUtf8()));
   ids_.clear();
 }
@@ -136,8 +144,6 @@ void QlUpdateDocument::SendVia(QNetworkAccessManager &mgr, QUrl base_url) {
   SetupReply(mgr.post(req, body_.toUtf8()));
 }
 void QlUpdateDocument::RequestFinished() {
-  std::cerr << QJsonDocument::fromJson(repl_->readAll()).toJson().toStdString()
-            << '\n';
   if (repl_->error() != 0) {
     emit Failure();
   } else {

@@ -1,10 +1,5 @@
 #pragma once
 
-#include "qjsonarray.h"
-#include "serializer.h"
-#include <QNetworkAccessManager>
-#include <QUrlQuery>
-#include <iostream>
 #include <qjsondocument.h>
 #include <qjsonobject.h>
 #include <qjsonvalue.h>
@@ -12,19 +7,16 @@
 #include <qnetworkreply.h>
 #include <qnetworkrequest.h>
 #include <qobject.h>
-#include <qtmetamacros.h>
 #include <qurl.h>
 #include <qurlquery.h>
+
+#include "serializer.h"
 
 class QlasticOperation : public QObject {
   Q_OBJECT
 public:
   QlasticOperation() {};
-  virtual ~QlasticOperation() {
-    // deleteLater?
-    // delete repl_;
-    repl_ = nullptr;
-  }
+  virtual ~QlasticOperation() { repl_ = nullptr; }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) = 0;
 public slots:
   virtual void RequestFinished() = 0;
@@ -63,15 +55,7 @@ class QlDeleteIndex : public QlasticOperation {
 public:
   explicit QlDeleteIndex(QString index) : index_(index) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
-  virtual void RequestFinished() override {
-    if (repl_->error() != 0) {
-      emit Failure(repl_->error());
-    } else {
-      emit Success();
-    }
-    repl_->deleteLater();
-    repl_ = nullptr;
-  }
+  virtual void RequestFinished() override;
 signals:
   void Success();
   void Failure(QNetworkReply::NetworkError);
@@ -90,19 +74,7 @@ public:
     SetParams(q);
   }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
-  virtual void RequestFinished() override {
-    auto x = repl_->readAll();
-    std::cerr << QJsonDocument::fromJson(x).toJson().toStdString();
-    if (repl_->error() != 0) {
-      std::cerr << x.toStdString();
-      emit Failure();
-    } else {
-      auto res = QJsonDocument::fromJson(x);
-      emit Success(res.object());
-    }
-    repl_->deleteLater();
-    repl_ = nullptr;
-  }
+  virtual void RequestFinished() override;
   void SetBody(QString body) { body_ = body; }
   void SetParams(QString params) { params_ = params; }
   void SetParams(QUrlQuery q) { params_ = q.toString(); }
@@ -110,7 +82,7 @@ signals:
   void Failure();
   void Success(QJsonObject res);
 
-protected:
+private:
   QString params_;
   QString body_;
   QString index_;
@@ -160,10 +132,7 @@ public:
       : index_(index), id_(id) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override;
-  QlUpdateDocument &SetId(QString id) {
-    id_ = id;
-    return *this;
-  }
+  void SetId(QString id) { id_ = id; }
   QlUpdateDocument &SetObject(QObject *obj);
   QString GetId() const { return id_; }
 
@@ -177,34 +146,15 @@ private:
   QString body_;
 };
 
-class QlDeleteByQuery : public QlSearch {
-  Q_OBJECT
-public:
-  explicit QlDeleteByQuery(QString index, QJsonDocument body)
-      : QlSearch(index, body) {}
-  virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url);
-};
-
 class Qlastic : public QObject {
   Q_OBJECT
 public:
   explicit Qlastic(QUrl serv, QObject *parent = nullptr);
   virtual ~Qlastic() {};
 
-signals:
-  void Send(QlasticOperation *op);
-
-public slots:
-  void RequestFinished() { is_pending_ = false; }
-
-protected slots:
-  void SendHelper(QlasticOperation *op) {
-    is_pending_ = true;
-    op->SendVia(mgr_, url_);
-  }
+  void Send(QlasticOperation *op) { op->SendVia(mgr_, url_); }
 
 private:
-  bool is_pending_ = false;
   QUrl url_;
   QNetworkAccessManager mgr_;
 };

@@ -2,7 +2,9 @@
 #include <format>
 
 #include <imgui/imgui.h>
+
 #include <qcoreapplication.h>
+#include <qjsonarray.h>
 #include <qobject.h>
 
 #include "metamagic.h"
@@ -107,8 +109,8 @@ void Task1Window::PartInputSubmitted(QObject *obj) {
   }
   if (curr_action_ == kInputUntil) {
     if (!property_selector_.IsSatysfying(&part_wrapper_)) {
-      array_ =
-          (FactoryPart *)realloc(array_, sizeof(FactoryPart) * (++array_size_));
+      array_ = static_cast<FactoryPart *>(
+          realloc(array_, sizeof(FactoryPart) * (++array_size_)));
     }
   }
   ++filled_in_;
@@ -327,7 +329,6 @@ void Task1Window::SendSearch(QJsonObject obj) {
   next_action_ = kNoAction;
   QJsonArray fields{"volume"};
   obj["fields"] = fields;
-  std::cerr << QJsonDocument(obj).toJson(QJsonDocument::Indented).toStdString();
   search_.SetBody(QJsonDocument(obj).toJson(QJsonDocument::Compact));
   qls_->Send(&search_);
 }
@@ -390,8 +391,8 @@ void Task1Window::InputUntilCondition() {
   action_win_open_ = true;
   curr_action_ = kInputUntil;
   old_size_ = array_size_;
-  array_ =
-      (FactoryPart *)realloc(array_, sizeof(FactoryPart) * (++array_size_));
+  array_ = static_cast<FactoryPart *>(
+      realloc(array_, sizeof(FactoryPart) * (++array_size_)));
   ++curr_item_;
   meta_input_.Reset();
 }

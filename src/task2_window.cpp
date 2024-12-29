@@ -3,6 +3,7 @@
 
 #include <imgui/imgui.h>
 #include <qcoreapplication.h>
+#include <qjsonarray.h>
 #include <qobject.h>
 
 #include "metamagic.h"
@@ -279,7 +280,6 @@ void Task2Window::SendSearch(QJsonObject obj) {
   next_action_ = kNoAction;
   QJsonArray fields{"volume"};
   obj["fields"] = fields;
-  std::cerr << QJsonDocument(obj).toJson(QJsonDocument::Indented).toStdString();
   search_.SetBody(QJsonDocument(obj).toJson(QJsonDocument::Compact));
   qls_->Send(&search_);
 }
@@ -304,8 +304,6 @@ void Task2Window::SendSearchWithSort(QObject * /* unused */) {
   };
   // clang-format on
 
-  std::cerr
-      << QJsonDocument(res2).toJson(QJsonDocument::Indented).toStdString();
   search_.SetBody(QJsonDocument(res2).toJson(QJsonDocument::Compact));
   qls_->Send(&search_);
 }

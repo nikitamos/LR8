@@ -74,7 +74,6 @@ int main(int argc, char **argv) {
   QObject::connect(&mw, &Window::Closed, &app, &QCoreApplication::quit);
   QObject::connect(&app, &QCoreApplication::aboutToQuit, [finptr]() {
     *finptr = true;
-    // QObject::disconnect(conn);
     ImTui_ImplText_Shutdown();
     ImTui_ImplNcurses_Shutdown();
   });
