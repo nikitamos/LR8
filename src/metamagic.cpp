@@ -1,11 +1,25 @@
 #include "metamagic.h"
 #include "imgui/imgui.h"
+#include <qcborcommon.h>
+#include <qcontainerfwd.h>
 #include <qjsonarray.h>
 #include <qjsonobject.h>
 #include <qlogging.h>
 #include <qmetaobject.h>
 #include <qobject.h>
 #include <qvariant.h>
+
+std::string StringifyConstantCase(const char *c) {
+  std::string s(c);
+  s.erase(0, 1);
+  for (int i = 1; i < s.size(); ++i) {
+    if (isupper(s[i]) != 0) {
+      s[i] = tolower(s[i]);
+      s.insert(i, " ");
+    }
+  }
+  return s;
+}
 
 Input::Input(QString pname) : property_name(pname) {
   auto text2 = property_name;
@@ -40,15 +54,7 @@ Input *Input::FromType(QMetaType meta, QString property_name) {
 
 EnumInput::EnumInput(QString p, QMetaEnum meta) : BufInput(p), meta(meta) {
   for (int i = 0; i < meta.keyCount(); ++i) {
-    std::string s(meta.valueToKey(i));
-    s.erase(0, 1);
-    for (int i = 1; i < s.size(); ++i) {
-      if (isupper(s[i]) != 0) {
-        s[i] = tolower(s[i]);
-        s.insert(i, " ");
-      }
-    }
-    item_names.push_back(s);
+    item_names.push_back(StringifyConstantCase(meta.valueToKey(i)));
   }
 }
 
@@ -69,6 +75,7 @@ void EnumInput::Render() {
 }
 
 void MetaInput::Populate() {
+  qDebug() << "pop" << t_;
   for (auto &i : item_) {
     t_->setProperty(i->property_name.toUtf8(), i->Get());
   }
@@ -97,7 +104,6 @@ void MetaInput::SetTarget(QObject *new_target) {
 
 void MetaInput::PopulateFromTarget(QObject *new_target) {
   SetTarget(new_target);
-  
 }
 
 void MetaInput::Render() {
@@ -126,7 +132,7 @@ void MetaInput::Reset() {
 QObject *MetaInput::GetTarget() { return t_; }
 
 void MetaInput::RepopulateFromTarget() {
-for (auto &i : this->item_) {
+  for (auto &i : this->item_) {
     i->Set(t_->property(i->property_name.toUtf8()));
   }
 }
@@ -151,6 +157,9 @@ void MetaViewer::Render() {
             val.typeId() == QMetaType::Double) {
           item += std::format(
               "{}", round(prop.read(provider_).toDouble() * 1000.0) / 1000.0);
+        } else if ((val.metaType().flags() & QMetaType::IsEnumeration) != 0) {
+          item +=
+              StringifyConstantCase(prop.read(provider_).toString().toUtf8());
         } else {
           item += prop.read(provider_).toString().toStdString();
         }
@@ -287,13 +296,19 @@ void FieldValueSelector::ClearInput() {
 bool FieldValueSelector::IsSatysfying(QObject *check) {
   auto prop = inputs_[selected_]->property_name;
   auto check_value = check->property(prop.toUtf8());
-  if (!check_value.isValid() ||
-      check_value.metaType() != inputs_[selected_]->Get().metaType()) {
+  if (!check_value.isValid()) {
     return false;
   }
-  auto input_value = inputs_[selected_]->Get();
-  qDebug() << "Comparing" << input_value << "vs." << check_value;
-  return input_value == check_value;
+  QVariant input = inputs_[selected_]->Get();
+
+  if (check_value.metaType() != input.metaType()) {
+    if ((check_value.metaType().flags() & QMetaType::IsEnumeration) != 0 &&
+        input.canConvert(QMetaType::Int)) {
+      return check_value.toInt() == input.toInt();
+    }
+    return false;
+  }
+  return input == check_value;
 }
 
 std::string StringifySnakeCase(const char *text) {

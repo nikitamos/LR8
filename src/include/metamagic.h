@@ -26,6 +26,7 @@ inline QMetaEnum MetaTypeToMetaEnum(const QMetaType &t) {
 }
 
 std::string StringifySnakeCase(const char *text);
+std::string StringifyConstantCase(const char *c);
 
 struct Input {
   explicit Input(QString pname);

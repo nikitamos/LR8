@@ -3,6 +3,8 @@
 #include <QObject>
 #include <cstdint>
 #include <qcontainerfwd.h>
+#include <qdebug.h>
+#include <qlogging.h>
 #include <qobject.h>
 #include <qtmetamacros.h>
 
@@ -13,7 +15,7 @@
 
 #define MATERIAL_TAG_DECL {kSteel = 0, kBrass = 1, kNichrome = 2, kTitanium = 3}
 
-enum class MaterialTag MATERIAL_TAG_DECL;
+enum class MaterialTag : int MATERIAL_TAG_DECL;
 
 typedef struct FactoryPart {
   QString name;
@@ -34,7 +36,7 @@ public:
   explicit MetaFactoryPart(FactoryPart *inner, QObject *parent = nullptr)
       : QObject(parent), inner_(inner) {}
   void SetTarget(FactoryPart *target) { inner_ = target; }
-  enum Material MATERIAL_TAG_DECL;
+  enum Material : int MATERIAL_TAG_DECL;
   Q_ENUM(Material)
 
   Material Getmaterial() const { return static_cast<Material>(inner_->mt_int); }

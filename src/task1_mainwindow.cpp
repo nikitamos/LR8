@@ -5,6 +5,7 @@
 
 #include <qcoreapplication.h>
 #include <qjsonarray.h>
+#include <qlogging.h>
 #include <qobject.h>
 
 #include "metamagic.h"
@@ -71,7 +72,7 @@ void Task1Window::DrawMenuWindow() {
         curr_action_ = kViewWhole;
         action_win_open_ = true;
       }
-      if (ImGui::MenuItem("Sort")) {
+      if (ImGui::MenuItem("Sort") && filled_in_ != 0) {
         ShakerSort(array_, filled_in_);
         meta_viewer_.SetCollectionSize(filled_in_);
         meta_viewer_.SetProvider(&part_wrapper_);
@@ -96,8 +97,8 @@ void Task1Window::DrawMenuWindow() {
 }
 
 void Task1Window::PartInputSubmitted(QObject *obj) {
+  part_wrapper_.EvilVolumeCrutch();
   if (next_action_ == kModifyItem) {
-    part_wrapper_.EvilVolumeCrutch();
     curr_action_ = kWait;
     next_action_ = kViewWhole;
     update_.SetObject(obj);
@@ -105,6 +106,8 @@ void Task1Window::PartInputSubmitted(QObject *obj) {
 
     return;
   }
+  ++filled_in_;
+  create_.AddDocument(&part_wrapper_);
   if (curr_action_ == kInputUntil) {
     if (!property_selector_.IsSatysfying(&part_wrapper_)) {
       array_ = static_cast<FactoryPart *>(
@@ -112,8 +115,6 @@ void Task1Window::PartInputSubmitted(QObject *obj) {
       memset(array_ + array_size_ - 1, 0, sizeof(FactoryPart));
     }
   }
-  ++filled_in_;
-  create_.AddDocument(&part_wrapper_);
   if (filled_in_ == array_size_) {
     // Input is finished. Send the data to Elastic
     qls_->Send(&create_);
@@ -397,13 +398,13 @@ void Task1Window::InputUntilCondition() {
   action_win_open_ = true;
   curr_action_ = kInputUntil;
   old_size_ = array_size_;
+  qDebug() << array_;
   array_ = static_cast<FactoryPart *>(
       realloc(array_, sizeof(FactoryPart) * (++array_size_)));
-  memset(array_ + old_size_, 0, sizeof(FactoryPart));
-  if (old_size_ != 0) {
-    ++curr_item_;
-  } else {
-    curr_item_ = 0;
-  }
+  new (array_ + old_size_) FactoryPart;
+  filled_in_ = old_size_;
+  part_wrapper_.SetTarget(array_ + old_size_);
+  meta_input_.PopulateFromTarget(&part_wrapper_);
+  curr_item_ = array_size_ - 1;
   meta_input_.Reset();
 }
