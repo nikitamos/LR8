@@ -7,8 +7,9 @@ find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIRS})
 add_compile_options(${CURSES_CFLAGS})
 
-find_package(Qt6 COMPONENTS Core Network REQUIRED)
+option(LR8_SANITIZE_ADDRESS "Build with address sanitizer" Off)
 
+find_package(Qt6 COMPONENTS Core Network REQUIRED)
 add_subdirectory(imtui)
 
 add_library(lr8core SHARED
@@ -44,6 +45,16 @@ set_target_properties(task1 task2 lr8core PROPERTIES
     CXX_STANDARD 20
     AUTOMOC ON
 )
+
+if (${LR8_SANITIZE_ADDRESS})
+    target_compile_options(task1 PUBLIC -fsanitize=address)
+    target_compile_options(task2 PUBLIC -fsanitize=address)
+    target_compile_options(lr8core PUBLIC -fsanitize=address)
+    target_link_options(task1 PUBLIC -fsanitize=address)
+    target_link_options(task2 PUBLIC -fsanitize=address)
+    target_link_options(lr8core PUBLIC -fsanitize=address)
+endif()
+
 target_include_directories(task1 PRIVATE src/include)
 target_link_libraries(task1 PRIVATE
     imtui

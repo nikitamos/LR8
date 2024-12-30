@@ -257,6 +257,7 @@ void FieldValueSelector::Render(const char *name) {
   }
   ImGui::Begin(name, &open_);
   if (ImGui::Checkbox("Select All", &all_) || all_) {
+    ImGui::NewLine();
   } else {
     if (ImGui::NewLine(),
         ImGui::BeginCombo(label_.c_str(), inputs_[selected_]->text.c_str())) {
@@ -273,10 +274,10 @@ void FieldValueSelector::Render(const char *name) {
     }
     inputs_[selected_]->Render();
     ImGui::NewLine();
-  }
-  if (ImGui::Button("Input until")) {
-    emit InputUntil(JsonBody());
-    open_ = false;
+    if (ImGui::Button("Input until")) {
+      emit InputUntil(JsonBody());
+      open_ = false;
+    }
   }
   ImGui::SameLine();
   if (ImGui::Button("Delete")) {

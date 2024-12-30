@@ -18,6 +18,9 @@
             },
             "title": {
                 "type": "text"
+            },
+            "depository": {
+                "type": "long"
             }
         }
     }

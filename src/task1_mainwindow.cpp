@@ -369,6 +369,8 @@ void Task1Window::DeleteSingleItem(int n) {
     meta_viewer_.SetCollectionSize(filled_in_ - 1);
     meta_viewer_.SetCurrent(n - 1);
     part_wrapper_.SetTarget(array_ + n - 1);
+  } else {
+    part_wrapper_.SetTarget(array_ + n);
   }
   if (filled_in_ == 0) {
     next_action_ = kNoAction;
