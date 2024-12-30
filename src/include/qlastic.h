@@ -24,11 +24,7 @@ public slots:
   virtual void RequestFinished() = 0;
 
 protected:
-  void SetupReply(QNetworkReply *reply) {
-    repl_ = reply;
-    QObject::connect(repl_, &QNetworkReply::finished, this,
-                     &QlasticOperation::RequestFinished);
-  }
+  void SetupReply(QNetworkReply *reply);
   QNetworkReply *repl_ = nullptr;
 };
 
@@ -37,13 +33,7 @@ class QlCreateIndex : public QlasticOperation {
 public:
   explicit QlCreateIndex(QString index) : index_(index) {}
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
-  virtual void RequestFinished() override {
-    if (repl_->error() != 0) {
-      emit Failure(repl_->error());
-    } else {
-      emit Success();
-    }
-  }
+  virtual void RequestFinished() override;
 signals:
   void Success();
   void Failure(QNetworkReply::NetworkError);
@@ -69,17 +59,12 @@ private:
 class QlSearch : public QlasticOperation {
   Q_OBJECT
 public:
-  explicit QlSearch(QString index, QJsonDocument body)
-      : index_(index), body_(body.toJson()) {
-    QUrlQuery q;
-    q.addQueryItem("size", "10000");
-    SetParams(q);
-  }
+  explicit QlSearch(QString index, QJsonDocument body);
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override;
-  void SetBody(QString body) { body_ = body; }
-  void SetParams(QString params) { params_ = params; }
-  void SetParams(QUrlQuery q) { params_ = q.toString(); }
+  inline void SetBody(QString body) { body_ = body; }
+  inline void SetParams(QString params) { params_ = params; }
+  inline void SetParams(QUrlQuery q) { params_ = q.toString(); }
 signals:
   void Failure();
   void Success(QJsonObject res);
@@ -95,7 +80,7 @@ class QlBulkCreateDocuments : public QlasticOperation {
 public:
   explicit QlBulkCreateDocuments(QString index) : index_(index) {}
   /// Serializes the `doc` and adds it to the request
-  void AddDocument(QObject *doc) {
+  inline void AddDocument(QObject *doc) {
     docs_.push_back(QJsonDocument(Serialize(doc)));
   }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
@@ -115,8 +100,8 @@ class QlBulkDeleteDocuments : public QlasticOperation {
 public:
   explicit QlBulkDeleteDocuments(QString index) : index_(index) {}
   /// Add document with given `id` to the request
-  void AddDocument(QString id) { ids_.push_back(id); }
-  void ClearBody() { ids_.clear(); }
+  inline void AddDocument(QString id) { ids_.push_back(id); }
+  inline void ClearBody() { ids_.clear(); }
   virtual void SendVia(QNetworkAccessManager &mgr, QUrl base_url) override;
   virtual void RequestFinished() override;
 
@@ -140,7 +125,7 @@ public:
   void SetId(QString id) { id_ = id; }
   /// Serializes the object and uses its properties to form a request
   QlUpdateDocument &SetObject(QObject *obj);
-  QString GetId() const { return id_; }
+  inline QString GetId() const { return id_; }
 
 signals:
   void Success();
@@ -158,7 +143,7 @@ public:
   explicit Qlastic(QUrl serv, QObject *parent = nullptr);
   virtual ~Qlastic() {};
 
-  void Send(QlasticOperation *op) { op->SendVia(mgr_, url_); }
+  inline void Send(QlasticOperation *op) { op->SendVia(mgr_, url_); }
 
 private:
   QUrl url_;

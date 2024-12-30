@@ -40,9 +40,9 @@ void ShakerSort(FactoryPart *a, int count) {
   }
 }
 
-static float EvilVolumeCrutch(float weight, int index) {
+void MetaFactoryPart::EvilVolumeCrutch() {
   const float kDensityTable[] = {7850.0, 8700.0, 8400.0, 4540.0};
-  return weight / kDensityTable[index];
+  inner_->volume = inner_->weight / kDensityTable[inner_->mt_int];
 }
 
 void Task1Window::DrawMenuWindow() {

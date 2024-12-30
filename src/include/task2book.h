@@ -7,8 +7,8 @@
 
 #define PROP(type, x)                                                          \
   Q_PROPERTY(type x READ Get##x WRITE Set##x);                                 \
-  type Get##x() const { return inner_->x; }                                    \
-  void Set##x(type nval) { inner_->x = nval; }
+  inline type Get##x() const { return inner_->x; }                             \
+  inline void Set##x(type nval) { inner_->x = nval; }
 
 #define DEPOSITORY_DECL                                                        \
   {kMain = 0, kSubsidiary = 1, kReadingHall = 2, kRareEditions = 3}
@@ -34,9 +34,9 @@ class MetaLibraryBook : public QObject {
 public:
   enum Depository DEPOSITORY_DECL;
   Q_ENUM(Depository)
-  explicit MetaLibraryBook(LibraryBook *inner, QObject *parent = nullptr)
+  inline explicit MetaLibraryBook(LibraryBook *inner, QObject *parent = nullptr)
       : QObject(parent), inner_(inner) {}
-  void SetTarget(LibraryBook *target) { inner_ = target; }
+  inline void SetTarget(LibraryBook *target) { inner_ = target; }
 
   PROP(QString, registry_number)
   Q_PROPERTY(Depository depository READ Getdepository WRITE Setdepository)
@@ -46,10 +46,10 @@ public:
   PROP(QString, publishing_house)
   PROP(int, page_count)
 
-  Depository Getdepository() const {
+  inline Depository Getdepository() const {
     return (Depository)inner_->depository_int;
   }
-  void Setdepository(Depository d) { inner_->depository_int = d; }
+  inline void Setdepository(Depository d) { inner_->depository_int = d; }
 
 private:
   QString name_;

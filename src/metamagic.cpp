@@ -9,6 +9,17 @@
 #include <qobject.h>
 #include <qvariant.h>
 
+QMetaEnum MetaTypeToMetaEnum(const QMetaType &t) {
+  assert(t.flags() & QMetaType::IsEnumeration);
+  // Returns the metaobject enclosing the enum (read the docs~)
+  const auto *enclosing = t.metaObject();
+  std::string_view sv(t.name());
+  sv = sv.substr(sv.rfind(':') + 1);
+  int index = enclosing->indexOfEnumerator(sv.begin());
+  assert(index >= 0);
+  return enclosing->enumerator(index);
+}
+
 std::string StringifyConstantCase(const char *c) {
   std::string s(c);
   s.erase(0, 1);
@@ -71,6 +82,29 @@ void EnumInput::Render() {
       }
     }
     ImGui::EndCombo();
+  }
+}
+
+void StdStringInput::Render() {
+  ImGui::Text("%s", text.c_str());
+  ImGui::InputText(label.c_str(), &buf);
+}
+QVariant StdStringInput::Get() { return QString::fromStdString(buf); }
+void StdStringInput::Set(QVariant val) { buf = val.toString().toStdString(); }
+
+void IntInput::Render() {
+  ImGui::Text("%s", text.c_str());
+  ImGui::InputInt(label.c_str(), &buf);
+}
+
+void FloatInput::Render() {
+  ImGui::Text("%s", text.c_str());
+  ImGui::InputFloat(label.c_str(), &buf);
+}
+
+MetaInput::~MetaInput() {
+  for (auto &it : item_) {
+    delete it;
   }
 }
 

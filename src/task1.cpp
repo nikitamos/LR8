@@ -3,7 +3,6 @@
 #include <imtui/imtui.h>
 
 #include <QTimer>
-#include <iostream>
 #include <qcoreapplication.h>
 #include <qdebug.h>
 #include <qjsondocument.h>
@@ -25,8 +24,6 @@ const QString kTask1Index = "task1_factory";
 
 int main(int argc, char **argv) {
   QCoreApplication app{argc, argv};
-  std::cout << "wainting for debugger";
-  getchar();
 
   Qlastic qls(QUrl("http://localhost:9200/"));
 

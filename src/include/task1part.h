@@ -10,8 +10,8 @@
 
 #define PROP(type, x)                                                          \
   Q_PROPERTY(type x READ Get##x WRITE Set##x);                                 \
-  type Get##x() const { return inner_->x; }                                    \
-  void Set##x(type nval) { inner_->x = nval; }
+  inline type Get##x() const { return inner_->x; }                             \
+  inline void Set##x(type nval) { inner_->x = nval; }
 
 #define MATERIAL_TAG_DECL {kSteel = 0, kBrass = 1, kNichrome = 2, kTitanium = 3}
 
@@ -34,14 +34,16 @@ typedef struct FactoryPart {
 class MetaFactoryPart : public QObject {
   Q_OBJECT
 public:
-  explicit MetaFactoryPart(FactoryPart *inner, QObject *parent = nullptr)
+  inline explicit MetaFactoryPart(FactoryPart *inner, QObject *parent = nullptr)
       : QObject(parent), inner_(inner) {}
-  void SetTarget(FactoryPart *target) { inner_ = target; }
+  inline void SetTarget(FactoryPart *target) { inner_ = target; }
   enum Material : int MATERIAL_TAG_DECL;
   Q_ENUM(Material)
 
-  Material Getmaterial() const { return static_cast<Material>(inner_->mt_int); }
-  void Setmaterial(Material m) { inner_->mt_int = m; }
+  inline Material Getmaterial() const {
+    return static_cast<Material>(inner_->mt_int);
+  }
+  inline void Setmaterial(Material m) { inner_->mt_int = m; }
 
   PROP(QString, name)
   Q_PROPERTY(Material material READ Getmaterial WRITE Setmaterial)
@@ -49,11 +51,8 @@ public:
   PROP(qint32, department_no)
   PROP(float, weight)
   Q_PROPERTY(float volume READ Getvolume)
-  float Getvolume() { return inner_->volume; }
-  void EvilVolumeCrutch() {
-    const float kDensityTable[] = {7850.0, 8700.0, 8400.0, 4540.0};
-    inner_->volume = inner_->weight / kDensityTable[inner_->mt_int];
-  }
+  inline float Getvolume() { return inner_->volume; }
+  void EvilVolumeCrutch();
 
 private:
   QString name_;

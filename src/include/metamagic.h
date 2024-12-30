@@ -14,17 +14,7 @@
 #include <random>
 #include <string>
 
-inline QMetaEnum MetaTypeToMetaEnum(const QMetaType &t) {
-  assert(t.flags() & QMetaType::IsEnumeration);
-  // Returns the metaobject enclosing the enum (read the docs~)
-  const auto *enclosing = t.metaObject();
-  std::string_view sv(t.name());
-  sv = sv.substr(sv.rfind(':') + 1);
-  int index = enclosing->indexOfEnumerator(sv.begin());
-  assert(index >= 0);
-  return enclosing->enumerator(index);
-}
-
+QMetaEnum MetaTypeToMetaEnum(const QMetaType &t);
 std::string StringifySnakeCase(const char *text);
 std::string StringifyConstantCase(const char *c);
 
@@ -38,7 +28,7 @@ struct Input {
   virtual void Set(QVariant val) = 0;
   QString property_name;
   std::string text;
-  std::string GetLabel() { return "##" + std::to_string(rand()); }
+  inline std::string GetLabel() { return "##" + std::to_string(rand()); }
   std::string label;
   static std::mt19937_64 rand;
   static Input *FromType(QMetaType meta, QString property_name);
@@ -54,14 +44,9 @@ template <typename T> struct BufInput : public Input {
 
 struct StdStringInput : public Input {
   explicit StdStringInput(QString p) : Input(p) {}
-  virtual void Render() override {
-    ImGui::Text("%s", text.c_str());
-    ImGui::InputText(label.c_str(), &buf);
-  }
-  virtual QVariant Get() override { return QString::fromStdString(buf); }
-  virtual void Set(QVariant val) override {
-    buf = val.toString().toStdString();
-  }
+  virtual void Render() override;
+  virtual QVariant Get() override;
+  virtual void Set(QVariant val) override;
   std::string buf;
 };
 
@@ -69,18 +54,12 @@ inline std::mt19937_64 Input::rand{};
 
 struct IntInput : public BufInput<int> {
   explicit IntInput(QString p) : BufInput(p) {}
-  virtual void Render() override {
-    ImGui::Text("%s", text.c_str());
-    ImGui::InputInt(label.c_str(), &buf);
-  }
+  virtual void Render() override;
 };
 
 struct FloatInput : public BufInput<float> {
   explicit FloatInput(QString p) : BufInput(p) {}
-  virtual void Render() override {
-    ImGui::Text("%s", text.c_str());
-    ImGui::InputFloat(label.c_str(), &buf);
-  }
+  virtual void Render() override;
 };
 
 struct EnumInput : public BufInput<int> {
@@ -103,11 +82,7 @@ public:
       SetTarget(target);
     }
   }
-  virtual ~MetaInput() {
-    for (auto &it : item_) {
-      delete it;
-    }
-  }
+  virtual ~MetaInput();
   /// The same as `SetTarget`, but also displays the values of `new_target`'s
   /// properties
   void PopulateFromTarget(QObject *new_target);
@@ -147,23 +122,23 @@ public:
   explicit MetaViewer(QObject *provider = nullptr, int size = 0)
       : provider_(provider), size_(size) {}
   /// Get an example object to check the properties
-  void SetProvider(QObject *prov) { provider_ = prov; }
+  inline void SetProvider(QObject *prov) { provider_ = prov; }
   /// Get an index of a current item
-  int GetCurrent() const { return curr_; }
+  inline int GetCurrent() const { return curr_; }
   /// Set current index. (The provider must me updated manually)
-  void SetCurrent(int newval) { curr_ = newval; }
+  inline void SetCurrent(int newval) { curr_ = newval; }
   /// Set the size of array (for display only)
-  void SetCollectionSize(int newsize) { size_ = newsize; }
-  int GetCollectionSize() const { return size_; }
-  bool IsOpen() const { return open_; }
+  inline void SetCollectionSize(int newsize) { size_ = newsize; }
+  inline int GetCollectionSize() const { return size_; }
+  inline bool IsOpen() const { return open_; }
   void Render();
   /// Closes the window and emits `Closed` signal
-  void Close() {
+  inline void Close() {
     open_ = false;
     emit Closed();
   }
   /// Does not emit `Closed` signal
-  void SetOpen(bool v) { open_ = v; }
+  inline void SetOpen(bool v) { open_ = v; }
 signals:
   void Next(int n);
   void Previous(int n);
@@ -191,12 +166,12 @@ public:
 
   void Render(const char *name = "Some input");
 
-  QMetaType GetPrototype() { return proto_; }
+  inline QMetaType GetPrototype() { return proto_; }
   /// Return the contents as Elasticsearch Search API query
   QJsonObject JsonBody();
 
-  void SetOpen(bool v) { open_ = v; }
-  bool IsOpen() const { return open_; }
+  inline void SetOpen(bool v) { open_ = v; }
+  inline bool IsOpen() const { return open_; }
   /// Checks that the given object satisfies the condition input by user
   bool IsSatysfying(QObject *check);
 signals:

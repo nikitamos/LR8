@@ -12,6 +12,12 @@
 
 #include "serializer.h"
 
+void QlasticOperation::SetupReply(QNetworkReply *reply) {
+  repl_ = reply;
+  QObject::connect(repl_, &QNetworkReply::finished, this,
+                   &QlasticOperation::RequestFinished);
+}
+
 Qlastic::Qlastic(QUrl serv, QObject *parent)
     : url_(serv), mgr_(this), QObject(parent) {}
 
@@ -39,6 +45,21 @@ void QlDeleteIndex::RequestFinished() {
   }
   repl_->deleteLater();
   repl_ = nullptr;
+}
+
+void QlCreateIndex::RequestFinished() {
+  if (repl_->error() != 0) {
+    emit Failure(repl_->error());
+  } else {
+    emit Success();
+  }
+}
+
+QlSearch::QlSearch(QString index, QJsonDocument body)
+    : index_(index), body_(body.toJson()) {
+  QUrlQuery q;
+  q.addQueryItem("size", "10000");
+  SetParams(q);
 }
 
 void QlSearch::RequestFinished() {
